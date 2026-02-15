@@ -1,0 +1,17 @@
+env:
+  http:
+    port: 8080
+  anypoint:
+    platform:
+      organization: "YOUR_ORG_ID"
+      environment: "Sandbox"
+proxies:
+  onboarding-broker:
+    pathPrefix: /onboarding-broker
+    upstreamUrl: http://agent-broker:8080
+    policies:
+      - rate-limit:
+          interval: 1m
+          requestsPermitted: 100
+      - cors:
+          allowedOrigins: ["*"]

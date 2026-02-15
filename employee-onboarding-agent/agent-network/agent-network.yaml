@@ -1,0 +1,43 @@
+apiVersion: a2a.mulesoft.com/v1alpha1
+kind: AgentNetwork
+metadata:
+  name: employee-onboarding-postgres
+spec:
+  brokers:
+    onboarding-broker:
+      card:
+        protocolVersion: "0.3.0"
+        name: "Employee Onboarding Agent (Postgres)"
+        description: "Complete employee onboarding workflow using PostgreSQL + Groq"
+        url: "http://localhost:8080/onboarding-broker"
+        provider: 
+          organization: "LocalDev"
+        defaultInputModes: ["application/json", "text/plain"]
+        skills:
+          - id: "employee-onboarding"
+            description: "Onboards new employees to Postgres HR system"
+            tags: ["hr", "onboarding", "postgres", "agent"]
+      spec:
+        llm:
+          provider: "groq"
+          model: "llama-3.3-70b-versatile"
+        instructions: |
+          You are Employee Onboarding Agent. Process requests like:
+          "Onboard John Doe, john.doe@company.com, Software Engineer, Engineering"
+          
+          Steps:
+          1. Extract: Generate employee_id (EMP001 format), name, email, dept, role
+          2. Validate: Email format, required fields
+          3. Call postgres-mcp.onboard_employee function
+          4. Return success confirmation with employee_id in JSON format.
+        links:
+          - mcp:
+              ref: "postgres-mcp"
+        maxNumberOfLoops: 10
+        maxTokens: 2000
+  mcpServers:
+    postgres-mcp:
+      servers:
+        - name: "postgres-hr-mcp"
+          url: "http://mule-mcp:8081/mcp"
+          transport: "streamableHttp"

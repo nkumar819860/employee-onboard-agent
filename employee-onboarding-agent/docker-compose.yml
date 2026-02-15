@@ -1,0 +1,65 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: hrdb
+      POSTGRES_USER: hruser
+      POSTGRES_PASSWORD: hrpass123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hruser hrdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mule-mcp:
+    build: ./postgres-mcp
+    ports:
+      - "8081:8081"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: hrdb
+      POSTGRES_USER: hruser
+      POSTGRES_PASSWORD: hrpass123
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./logs:/opt/mule/logs
+
+  agent-broker:
+    image: mulesoft/agent-broker:latest
+    ports:
+      - "8082:8080"
+    environment:
+      AGENT_NETWORK_CONFIG: /config/agent-network.yaml
+      POSTGRES_MCP_URL: http://mule-mcp:8081/mcp
+      GROQ_API_KEY: "${GROQ_API_KEY}"
+    volumes:
+      - ./agent-network:/config
+      - ./logs:/logs
+    depends_on:
+      - mule-mcp
+
+  flex-gateway:
+    image: mulesoft/flex-gateway:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./flex-gateway/config.yml:/usr/local/share/flex-gateway/conf/config.yml
+      - ./agent-network:/agents
+    environment:
+      FLEX_GATEWAY_ANYPPOINT_TOKEN: "${FLEX_GATEWAY_ANYPPOINT_TOKEN}"
+    command: >
+      flex-gateway start
+      --config /usr/local/share/flex-gateway/conf/config.yml
+      --proxies-dir /agents
+
+volumes:
+  postgres_data:
