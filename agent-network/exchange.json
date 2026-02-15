@@ -1,0 +1,8 @@
+{
+  "exchange": {
+    "name": "employee-onboarding-postgres",
+    "groupId": "com.example",
+    "artifactId": "employee-onboarding-agent",
+    "version": "1.0.0"
+  }
+}

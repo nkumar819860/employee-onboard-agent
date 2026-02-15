@@ -1,0 +1,103 @@
+<!-- Place this in sec/main/mule -->
+
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns="http://www.mulesoft.org/schema/mule/core" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+        http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+        http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+    <db:config name="postgres_config">
+        <db:generic-connection 
+            host="${postgres.host}" 
+            port="${postgres.port}"
+            user="${postgres.username}" 
+            password="${postgres.password}"
+            database="${postgres.database}"
+            driverClassName="org.postgresql.Driver">
+            <db:pooling-profile maxIdle="10" maxWait="30000"/>
+        </db:generic-connection>
+    </db:config>
+
+    <flow name="postgres-mcp-endpoint">
+        <http:listener config-ref="HTTP_Listener_config" path="/mcp" doc:name="MCP Listener"/>
+        
+        <ee:transform doc:name="Parse MCP Request">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    tool: payload.body.tool,
+    params: payload.body.params
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        
+        <choice doc:name="Route by Tool">
+            <when expression="#[payload.tool == 'onboard_employee']">
+                <db:execute doc:name="Onboard Employee">
+                    <db:statement><![CDATA[SELECT onboard_employee(
+                        $[0]::varchar, $[1]::varchar, $[2]::varchar, 
+                        $[3]::varchar, $[4]::varchar, $[5]::varchar
+                    )]]></db:statement>
+                    <db:input-parameters>#[{
+                        employee_id: payload.params.employee_id,
+                        first_name: payload.params.first_name,
+                        last_name: payload.params.last_name,
+                        email: payload.params.email,
+                        department: payload.params.department,
+                        role: payload.params.role
+                    }]</db:input-parameters>
+                </db:execute>
+            </when>
+            <when expression="#[payload.tool == 'get_employee']">
+                <db:execute doc:name="Get Employee">
+                    <db:statement><![CDATA[SELECT get_employee($[0]::varchar)]]></db:statement>
+                    <db:input-parameters>#[ [payload.params.employee_id] ]</db:input-parameters>
+                </db:execute>
+            </when>
+            <otherwise>
+                <set-payload value="#[output application/json --- { error: 'Unknown tool: ' ++ payload.tool }]" />
+            </otherwise>
+        </choice>
+        
+        <ee:transform doc:name="Format MCP Response">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    content: [{
+        type: "text",
+        text: if (payload.result[0]?) payload.result[0] else payload
+    }]
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        
+        <http:response-status code="200"/>
+        <logger level="INFO" message="#[payload]"/>
+    </flow>
+
+    <http:listener-config name="HTTP_Listener_config">
+        <http:listener-connection host="0.0.0.0" port="8081"/>
+        <http:cors-config ref="CORS_Policy"/>
+    </http:listener-config>
+    
+    <http:cors-config name="CORS_Policy" allowCredentials="true">
+        <http:allowed-origins>
+            <http:origin>*</http:origin>
+        </http:allowed-origins>
+        <http:allowed-methods>
+            <http:method>GET</http:method>
+            <http:method>POST</http:method>
+            <http:method>PUT</http:method>
+        </http:allowed-methods>
+    </http:cors-config>
+</mule>
