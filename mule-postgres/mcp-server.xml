@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns="http://www.mulesoft.org/schema/mule/core" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+      http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+      http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+
+  <db:config name="postgres-config">
+    <db:generic-connection 
+      host="${env.DB_HOST:'postgres'}" 
+      port="${env.DB_PORT:5432}" 
+      user="${env.DB_USER:'mule'}" 
+      password="${env.DB_PASS:'mule123'}" 
+      database="${env.DB_NAME:'onboarding'}"/>
+  </db:config>
+
+  <http:listener-config name="http-config">
+    <http:listener-connection host="0.0.0.0" port="8081"/>
+  </http:listener-config>
+
+  <!-- MCP Tool: Create Employee -->
+  <flow name="create-employee">
+    <http:listener config-ref="http-config" path="/mcp/tools/create-employee" method="POST"/>
+    <db:insert config-ref="postgres-config">
+      <db:sql>INSERT INTO employees (name, email, status) VALUES (#[payload.name], #[payload.email], 'pending')</db:sql>
+    </db:insert>
+    <set-payload value="#[{'status': 'created', 'employeeId': payload}]"/>
+  </flow>
+</mule>

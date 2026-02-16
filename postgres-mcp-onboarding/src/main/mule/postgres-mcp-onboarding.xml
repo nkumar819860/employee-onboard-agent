@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+    <flow name="create-employee">
+        <http:listener config-ref="http-config" path="/mcp/tools/create-employee" allowedMethods="POST"/>
+        <db:insert config-ref="postgres-config">
+            <db:sql>INSERT INTO employees (name, email, status) VALUES (#[payload.name], #[payload.email], 'pending')</db:sql>
+        </db:insert>
+        <set-payload value="#[{'status': 'created', 'employeeId': payload}]"/>
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true">
+                <logger level="ERROR" message="Error occurred: #[error.description]"/>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+</mule>

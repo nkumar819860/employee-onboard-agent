@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns="http://www.mulesoft.org/schema/mule/core">
+
+  <db:config name="postgres-config">
+    <db:generic-connection host="postgres" port="5432" user="mule" password="mule123" database="onboarding"/>
+  </db:config>
+
+  <http:listener-config name="http-config">
+    <http:listener-connection host="0.0.0.0" port="8081"/>
+  </http:listener-config>
+
+  <!-- MCP Tool: Allocate Assets -->
+  <flow name="allocate-assets">
+    <http:listener config-ref="http-config" path="/mcp/tools/allocate" method="POST"/>
+    <foreach collection="#[payload.assets]">
+      <db:insert config-ref="postgres-config">
+        <db:sql>INSERT INTO assets (emp_id, type, assigned) VALUES (#[payload.empId], #[payload], true)</db:sql>
+      </db:insert>
+    </foreach>
+    <set-payload value="#[{'status': 'assets allocated', 'empId': payload.empId}]"/>
+  </flow>
+</mule>

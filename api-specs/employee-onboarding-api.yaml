@@ -1,0 +1,270 @@
+openapi: 3.0.0
+info:
+  title: Employee Onboarding API
+  description: |
+    Employee onboarding API that orchestrates the complete onboarding workflow including:
+    - Employee record creation in PostgreSQL
+    - Asset allocation (laptop, ID card, bag, access card, welcome kit)
+    - Welcome email notifications
+    
+    This API is powered by MuleSoft's Anypoint Platform with Flex Gateway policies for security and rate limiting.
+  version: 1.0.0
+  contact:
+    name: HR Team
+    email: hr@company.com
+  license:
+    name: Proprietary
+    url: https://company.com/license
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://api.company.com
+    description: Production server
+
+paths:
+  /broker/onboard:
+    post:
+      summary: Onboard New Employee
+      description: |
+        Initiates the complete employee onboarding process using natural language processing.
+        This endpoint:
+        1. Creates employee record in database
+        2. Allocates standard assets
+        3. Sends welcome notification
+      operationId: onboardEmployee
+      tags:
+        - Employee Onboarding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeOnboardRequest'
+            examples:
+              standard_onboarding:
+                summary: Standard Employee Onboarding
+                value:
+                  name: "Pradeep Kumar"
+                  email: "pradeep.n2019@gmail.com"
+              manager_onboarding:
+                summary: Manager Onboarding with Additional Assets
+                value:
+                  name: "Jane Smith"
+                  email: "jane.smith@company.com"
+                  role: "manager"
+      responses:
+        '200':
+          description: Onboarding completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingResponse'
+              examples:
+                success:
+                  summary: Successful Onboarding
+                  value:
+                    status: "complete"
+                    employeeId: 1
+                    message: "Onboarding completed via Groq-powered Agent Broker"
+                    timestamp: "2026-02-16T16:47:34.844860"
+        '400':
+          description: Bad request - Invalid employee data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /mcp/postgres:
+    post:
+      summary: PostgreSQL MCP Operations
+      description: Direct access to PostgreSQL MCP tools for employee database operations
+      operationId: postgresqlMCP
+      tags:
+        - MCP Services
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MCPRequest'
+      responses:
+        '200':
+          description: MCP operation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MCPResponse'
+
+  /mcp/assets:
+    post:
+      summary: Assets MCP Operations
+      description: Direct access to Assets MCP tools for asset allocation
+      operationId: assetsMCP
+      tags:
+        - MCP Services
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MCPRequest'
+      responses:
+        '200':
+          description: MCP operation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MCPResponse'
+
+  /mcp/notifications:
+    post:
+      summary: Notifications MCP Operations
+      description: Direct access to Notifications MCP tools for communication
+      operationId: notificationsMCP
+      tags:
+        - MCP Services
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MCPRequest'
+      responses:
+        '200':
+          description: MCP operation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MCPResponse'
+
+components:
+  schemas:
+    EmployeeOnboardRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          description: Full name of the employee
+          example: "Pradeep Kumar"
+          minLength: 2
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          description: Employee's email address
+          example: "pradeep.n2019@gmail.com"
+        role:
+          type: string
+          description: Employee role (optional, affects asset allocation)
+          example: "developer"
+          enum: ["developer", "manager", "admin", "intern"]
+        department:
+          type: string
+          description: Department (optional)
+          example: "Engineering"
+
+    OnboardingResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Onboarding status
+          example: "complete"
+          enum: ["complete", "pending", "failed"]
+        employeeId:
+          type: integer
+          description: Generated employee ID
+          example: 1
+        message:
+          type: string
+          description: Human-readable status message
+          example: "Onboarding completed via Groq-powered Agent Broker"
+        timestamp:
+          type: string
+          format: date-time
+          description: Completion timestamp
+          example: "2026-02-16T16:47:34.844860"
+        services_called:
+          type: array
+          description: List of microservices that were invoked
+          items:
+            type: string
+          example: ["postgres-mcp", "assets-mcp", "notification-mcp"]
+
+    MCPRequest:
+      type: object
+      required:
+        - method
+      properties:
+        method:
+          type: string
+          description: MCP method to invoke
+          example: "health_check"
+        params:
+          type: object
+          description: Method parameters
+          additionalProperties: true
+
+    MCPResponse:
+      type: object
+      properties:
+        result:
+          type: object
+          description: MCP operation result
+          additionalProperties: true
+        error:
+          type: object
+          description: Error details if operation failed
+          properties:
+            code:
+              type: integer
+            message:
+              type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Invalid email format"
+        code:
+          type: string
+          description: Error code
+          example: "VALIDATION_ERROR"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-02-16T16:47:34.844860"
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Employee Onboarding
+    description: Core employee onboarding operations
+  - name: MCP Services
+    description: Direct access to Model Context Protocol services

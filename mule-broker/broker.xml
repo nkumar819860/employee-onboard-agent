@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns="http://www.mulesoft.org/schema/mule/core">
+
+  <http:listener-config name="http-config">
+    <http:listener-connection host="0.0.0.0" port="8081"/>
+  </http:listener-config>
+
+  <flow name="onboarding-broker">
+    <http:listener config-ref="http-config" path="/onboard" method="POST"/>
+    
+    <!-- Step 1: Create Employee (postgres-mcp) -->
+    <http:request method="POST" url="http://flex-gateway:80/mcp/postgres/tools/create-employee">
+      <http:body>#[payload]</http:body>
+    </http:request>
+    <set-variable variableName="empId" value="#[output application/json --- id: 1]"/> <!-- Sim ID -->
+    
+    <!-- Step 2: Allocate Assets (assets-mcp) -->
+    <http:request method="POST" url="http://flex-gateway:80/mcp/assets/tools/allocate">
+      <http:body>#[output application/json --- empId: vars.empId, assets: ['laptop', 'ID card', 'bag']]</http:body>
+    </http:request>
+    
+    <!-- Step 3: Send Welcome (notification-mcp) -->
+    <http:request method="POST" url="http://flex-gateway:80/mcp/notifications/tools/welcome">
+      <http:body>#[output application/json --- payload ++ {empId: vars.empId}]</http:body>
+    </http:request>
+    
+    <set-payload value="#[output application/json --- 
+      status: 'complete', 
+      employeeId: vars.empId,
+      message: 'Onboarding completed via Groq-powered Agent Broker'
+    ]"/>
+  </flow>
+</mule>
