@@ -220,13 +220,28 @@ const App: React.FC = () => {
   const [showResults, setShowResults] = useState(false);
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [metrics, setMetrics] = useState({
+    totalEmployees: 0,
+    totalAssets: 0,
+    totalCost: 0,
+    avgProcessingTime: 0,
+    successRate: 100
+  });
 
-  // Initialize MCP session on component mount
+  // Initialize MCP session and load existing data on component mount
   useEffect(() => {
     const initializeSession = async () => {
       try {
         await mcpClient.createSession();
         console.log('MCP Session initialized successfully');
+        
+        // Load existing data
+        const existingEmployees = mcpClient.getSimulatedEmployees();
+        const existingAssets = mcpClient.getSimulatedAssets();
+        
+        setEmployees(existingEmployees);
+        setAssets(existingAssets);
+        
       } catch (error) {
         console.error('Failed to initialize MCP session:', error);
       }
@@ -234,6 +249,17 @@ const App: React.FC = () => {
 
     initializeSession();
   }, [mcpClient]);
+
+  // Update metrics whenever employees or assets change
+  useEffect(() => {
+    setMetrics({
+      totalEmployees: employees.length,
+      totalAssets: assets.length,
+      totalCost: assets.reduce((sum, asset) => sum + asset.cost, 0),
+      avgProcessingTime: 2, // Mock average time
+      successRate: 100
+    });
+  }, [employees, assets]);
 
   const handleProgressUpdate = (status: string, message: string, data?: any) => {
     setStatusMessage(message);
@@ -369,45 +395,126 @@ const App: React.FC = () => {
             <StatusCard icon="fa-bell" title="Notifications MCP" status="healthy" />
           </div>
 
-          {/* NLP Input Section */}
-          <div className="card mb-4">
-            <div className="card-header">
-              <h5><i className="fas fa-comments"></i> Natural Language Employee Onboarding</h5>
+          {/* Metrics Dashboard */}
+          <div className="row mb-4">
+            <div className="col-md-3">
+              <div className="card text-center" style={{background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white'}}>
+                <div className="card-body">
+                  <i className="fas fa-users fa-2x mb-2"></i>
+                  <h4 className="mb-0">{employees.length}</h4>
+                  <small>Total Employees</small>
+                </div>
+              </div>
             </div>
-            <div className="card-body">
+            <div className="col-md-3">
+              <div className="card text-center" style={{background: 'linear-gradient(135deg, #43cea2, #185a9d)', color: 'white'}}>
+                <div className="card-body">
+                  <i className="fas fa-box fa-2x mb-2"></i>
+                  <h4 className="mb-0">{assets.length}</h4>
+                  <small>Assets Allocated</small>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card text-center" style={{background: 'linear-gradient(135deg, #f093fb, #f5576c)', color: 'white'}}>
+                <div className="card-body">
+                  <i className="fas fa-dollar-sign fa-2x mb-2"></i>
+                  <h4 className="mb-0">${assets.reduce((sum, asset) => sum + asset.cost, 0)}</h4>
+                  <small>Total Cost</small>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card text-center" style={{background: 'linear-gradient(135deg, #4facfe, #00f2fe)', color: 'white'}}>
+                <div className="card-body">
+                  <i className="fas fa-clock fa-2x mb-2"></i>
+                  <h4 className="mb-0">~2s</h4>
+                  <small>Avg Process Time</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* NLP Input Section */}
+          <div className="card mb-4" style={{border: '2px solid #e3f2fd', background: 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)'}}>
+            <div className="card-header" style={{background: 'linear-gradient(45deg, #667eea, #764ba2)', color: 'white', borderRadius: '15px 15px 0 0'}}>
+              <h5 className="mb-0"><i className="fas fa-comments"></i> Smart Employee Onboarding Assistant</h5>
+              <small>💡 Just type naturally - press Enter to process instantly!</small>
+            </div>
+            <div className="card-body p-4">
               <div className="mb-3">
-                <label htmlFor="nlpInput" className="form-label">
-                  Enter onboarding request in natural language:
+                <label htmlFor="nlpInput" className="form-label fw-bold" style={{color: '#495057'}}>
+                  🗣️ Describe your onboarding request:
                 </label>
                 <textarea
                   className="form-control nlp-input"
                   id="nlpInput"
-                  rows={3}
+                  rows={4}
                   value={nlpInput}
                   onChange={(e) => setNlpInput(e.target.value)}
-                  placeholder="Example: onboard employee John Smith,john.smith@company.com as developer in engineering department"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !isProcessing && nlpInput.trim()) {
+                      e.preventDefault();
+                      handleProcessOnboarding();
+                    }
+                  }}
+                  placeholder="🎯 Try: onboard employee John Smith, john.smith@company.com as senior developer in engineering department"
+                  style={{
+                    fontSize: '1.1rem',
+                    fontFamily: 'Poppins, sans-serif',
+                    borderRadius: '15px',
+                    border: '2px solid #e3f2fd',
+                    padding: '1rem 1.25rem',
+                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
+                  }}
                 />
-                <div className="form-text">
-                  <strong>Examples:</strong><br />
-                  • "onboard employee Pradeep Kumar,pradeep.n2019@gmail.com as developer"<br />
-                  • "create new employee Sarah Johnson,sarah.johnson@company.com for manager role"<br />
-                  • "process onboarding for intern Mike Wilson,mike.wilson@company.com in IT department"
+                <div className="form-text mt-3 p-3" style={{background: '#f0f9ff', borderRadius: '10px', border: '1px solid #e0f2fe'}}>
+                  <div className="row">
+                    <div className="col-md-6">
+                      <strong style={{color: '#0369a1'}}>✨ Quick Examples:</strong><br />
+                      <small>• "onboard Pradeep Kumar, pradeep.n2019@gmail.com as developer"</small><br />
+                      <small>• "add Sarah Johnson, sarah@company.com as manager in sales"</small>
+                    </div>
+                    <div className="col-md-6">
+                      <strong style={{color: '#0369a1'}}>🚀 Pro Tips:</strong><br />
+                      <small>• Press <kbd>Enter</kbd> to process instantly</small><br />
+                      <small>• Use <kbd>Shift+Enter</kbd> for new lines</small>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="d-flex justify-content-between">
+              <div className="d-flex justify-content-between align-items-center">
                 <button
-                  className="btn btn-primary"
+                  className="btn btn-primary btn-lg"
                   onClick={handleProcessOnboarding}
-                  disabled={isProcessing}
+                  disabled={isProcessing || !nlpInput.trim()}
+                  style={{
+                    background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                    border: 'none',
+                    borderRadius: '25px',
+                    padding: '0.75rem 2.5rem',
+                    fontWeight: '600',
+                    fontFamily: 'Poppins, sans-serif',
+                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+                  }}
                 >
-                  <i className="fas fa-magic"></i> {isProcessing ? 'Processing...' : 'Process with NLP'}
+                  <i className="fas fa-magic me-2"></i>
+                  {isProcessing ? '🔄 Processing...' : '✨ Process Onboarding'}
                 </button>
-                <div>
-                  <button className="btn btn-secondary me-2" onClick={handleClearForm}>
-                    <i className="fas fa-eraser"></i> Clear
+                <div className="d-flex gap-2">
+                  <button 
+                    className="btn btn-outline-secondary"
+                    onClick={handleClearForm}
+                    style={{borderRadius: '20px', fontFamily: 'Poppins, sans-serif'}}
+                  >
+                    <i className="fas fa-eraser me-1"></i> Clear
                   </button>
-                  <button className="btn btn-warning" onClick={handleClearData}>
-                    <i className="fas fa-trash"></i> Clear All Data
+                  <button 
+                    className="btn btn-outline-warning"
+                    onClick={handleClearData}
+                    style={{borderRadius: '20px', fontFamily: 'Poppins, sans-serif'}}
+                  >
+                    <i className="fas fa-trash me-1"></i> Reset All
                   </button>
                 </div>
               </div>

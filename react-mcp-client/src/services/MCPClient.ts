@@ -30,6 +30,12 @@ export class MCPClient {
   private simulatedEmployees: EmployeeRecord[] = [];
   private simulatedAssets: Asset[] = [];
 
+  // Storage keys for persistence
+  private readonly EMPLOYEES_STORAGE_KEY = 'mcp_employees';
+  private readonly ASSETS_STORAGE_KEY = 'mcp_assets';
+  private readonly HISTORY_STORAGE_KEY = 'mcp_conversation_history';
+  private readonly SESSION_ID_KEY = 'mcp_session_id';
+
   // NLP patterns for extracting employee information
   private nlpPatterns: NLPPatterns = {
     email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/,
@@ -40,7 +46,6 @@ export class MCPClient {
   };
 
   constructor(baseUrl: string = 'http://localhost:8080') {
-    this.sessionId = generateUUID();
     this.config = {
       baseUrl,
       endpoints: {
@@ -50,6 +55,68 @@ export class MCPClient {
         notifications_mcp: `${baseUrl}/mcp/notifications`
       }
     };
+    
+    // Initialize from localStorage or create new session
+    this.initializeFromStorage();
+  }
+
+  /**
+   * Initialize data from localStorage or create fresh state
+   */
+  private initializeFromStorage(): void {
+    try {
+      // Load or create session ID
+      const storedSessionId = localStorage.getItem(this.SESSION_ID_KEY);
+      if (storedSessionId) {
+        this.sessionId = storedSessionId;
+        console.log(`🔄 Restored MCP Session: ${this.sessionId}`);
+      } else {
+        this.sessionId = generateUUID();
+        localStorage.setItem(this.SESSION_ID_KEY, this.sessionId);
+        console.log(`🆕 Created new MCP Session: ${this.sessionId}`);
+      }
+
+      // Load employees
+      const storedEmployees = localStorage.getItem(this.EMPLOYEES_STORAGE_KEY);
+      if (storedEmployees) {
+        this.simulatedEmployees = JSON.parse(storedEmployees);
+        console.log(`📥 Loaded ${this.simulatedEmployees.length} employees from storage`);
+      }
+
+      // Load assets
+      const storedAssets = localStorage.getItem(this.ASSETS_STORAGE_KEY);
+      if (storedAssets) {
+        this.simulatedAssets = JSON.parse(storedAssets);
+        console.log(`📥 Loaded ${this.simulatedAssets.length} assets from storage`);
+      }
+
+      // Load conversation history
+      const storedHistory = localStorage.getItem(this.HISTORY_STORAGE_KEY);
+      if (storedHistory) {
+        this.conversationHistory = JSON.parse(storedHistory);
+        console.log(`📥 Loaded ${this.conversationHistory.length} conversation entries from storage`);
+      }
+    } catch (error) {
+      console.error('❌ Error loading from localStorage:', error);
+      // Continue with empty state if storage is corrupted
+      this.sessionId = generateUUID();
+      localStorage.setItem(this.SESSION_ID_KEY, this.sessionId);
+    }
+  }
+
+  /**
+   * Save current state to localStorage
+   */
+  private saveToStorage(): void {
+    try {
+      localStorage.setItem(this.EMPLOYEES_STORAGE_KEY, JSON.stringify(this.simulatedEmployees));
+      localStorage.setItem(this.ASSETS_STORAGE_KEY, JSON.stringify(this.simulatedAssets));
+      localStorage.setItem(this.HISTORY_STORAGE_KEY, JSON.stringify(this.conversationHistory));
+      localStorage.setItem(this.SESSION_ID_KEY, this.sessionId);
+      console.log('💾 Data saved to localStorage successfully');
+    } catch (error) {
+      console.error('❌ Error saving to localStorage:', error);
+    }
   }
 
   /**
@@ -229,6 +296,7 @@ export class MCPClient {
       created_at: new Date().toISOString()
     };
     this.simulatedEmployees.push(employeeRecord);
+    this.saveToStorage();
 
     return {
       success: true,
@@ -302,6 +370,7 @@ export class MCPClient {
       allocatedAssets.push(assetRecord);
       this.simulatedAssets.push(assetRecord);
     });
+    this.saveToStorage();
 
     return {
       success: true,
@@ -391,6 +460,7 @@ export class MCPClient {
       type: 'user_input',
       content: naturalLanguageInput
     });
+    this.saveToStorage();
 
     onProgressUpdate?.('processing', 'Processing natural language input...');
 
@@ -491,6 +561,7 @@ export class MCPClient {
         type: 'workflow_result',
         content: workflowResults
       });
+      this.saveToStorage();
 
       console.log('🎉 Employee onboarding workflow completed successfully!');
       return workflowResults;
@@ -561,5 +632,15 @@ export class MCPClient {
     this.simulatedEmployees = [];
     this.simulatedAssets = [];
     this.conversationHistory = [];
+    
+    // Clear from localStorage as well
+    try {
+      localStorage.removeItem(this.EMPLOYEES_STORAGE_KEY);
+      localStorage.removeItem(this.ASSETS_STORAGE_KEY);
+      localStorage.removeItem(this.HISTORY_STORAGE_KEY);
+      console.log('🗑️ Cleared all data from localStorage');
+    } catch (error) {
+      console.error('❌ Error clearing localStorage:', error);
+    }
   }
 }
