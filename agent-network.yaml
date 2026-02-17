@@ -1,17 +1,30 @@
+# Agent Network Configuration for Anypoint Platform Deployment
 schemaVersion: 1.0.0
-label: Employee Onboarding Agent
+label: Employee Onboarding Agent - Anypoint Platform
+
+# Anypoint Platform specific configuration
+platform:
+  type: anypoint
+  organization: ${anypoint.organization.id}
+  environment: ${anypoint.environment.name}
+  runtime: cloudhub-2.0
+  region: us-east-1
 
 brokers:
   onboarding-broker:
     card:
       protocolVersion: 0.3.0
-      name: Onboarding Broker
-      description: "Orchestrates employee onboarding workflow - creates employee record, allocates assets (laptop, ID card, bag), sends welcome email"
-      url: ${ingressgw.url}/broker/onboard
+      name: Onboarding Broker (CloudHub)
+      description: "Orchestrates employee onboarding workflow - creates employee record, allocates assets (laptop, ID card, bag), sends welcome email via CloudHub 2.0"
+      url: ${cloudhub.url}/broker/onboard
       capabilities:
         pushNotifications: true
       version: 1.0.0
-      securitySchemes: {}
+      securitySchemes:
+        apiKey:
+          type: apiKey
+          in: header
+          name: x-api-key
       defaultInputModes:
         - "application/json"
       defaultOutputModes:
@@ -19,7 +32,7 @@ brokers:
       skills:
         - id: "employee-onboarding"
           name: "Complete Employee Onboarding"
-          description: "Handles complete employee onboarding process including record creation, asset allocation, and welcome notifications"
+          description: "Handles complete employee onboarding process including record creation, asset allocation, and welcome notifications via Anypoint Platform"
           examples:
             - "Onboard new employee John Doe with email john@company.com"
             - "Process onboarding for Jane Smith, allocate standard kit"
@@ -27,89 +40,219 @@ brokers:
             - "application/json"
           outputModes:
             - "application/json"
-          tags: ["hr", "onboarding", "employee"]
+          tags: ["hr", "onboarding", "employee", "cloudhub", "anypoint"]
+      # Agent Visualizer Integration
+      visualizer:
+        enabled: true
+        dashboardId: ${anypoint.visualizer.dashboard.id}
+        metricsEnabled: true
+        tracingEnabled: true
     spec:
       llm:
         ref:
-          name: groq-llm
+          name: anypoint-llm
         configuration:
-          model: llama3-8b-8192
+          model: gpt-4-turbo
+          endpoint: ${openai.endpoint}
       instructions:
-        - "You are an HR onboarding broker powered by Groq. When given employee details, orchestrate the complete onboarding process by calling the MCP tools in sequence: 1) Create employee record, 2) Allocate assets (laptop, ID card, bag), 3) Send welcome email. Return completion status with employee ID."
+        - "You are an HR onboarding broker powered by OpenAI and deployed on Anypoint Platform. When given employee details, orchestrate the complete onboarding process by calling the MCP tools deployed on CloudHub 2.0 in sequence: 1) Create employee record, 2) Allocate assets (laptop, ID card, bag), 3) Send welcome email. Return completion status with employee ID and CloudHub deployment details."
       links:
         - agent:
             ref:
-              name: hr-agent
+              name: hr-agent-cloudhub
       tools:
         - mcp:
             ref:
-              name: postgres-mcp
+              name: postgres-mcp-cloudhub
         - mcp:
             ref:
-              name: assets-mcp
+              name: assets-mcp-cloudhub
         - mcp:
             ref:
-              name: notification-mcp
+              name: notification-mcp-cloudhub
 
 agents:
-  hr-agent:
-    label: HR Agent
+  hr-agent-cloudhub:
+    label: HR Agent (CloudHub 2.0)
     metadata:
       protocol: a2a
-      platform: Groq
+      platform: CloudHub
+      deployment:
+        type: cloudhub-2.0
+        replicas: 2
+        vCores: 1
+        region: us-east-1
+        environment: ${anypoint.environment.name}
+      visualizer:
+        enabled: true
+        category: "HR Agents"
 
 mcpServers:
-  postgres-mcp:
-    label: Postgres Employee Database
+  postgres-mcp-cloudhub:
+    label: Postgres Employee Database (CloudHub)
     metadata:
       transport:
         kind: streamableHttp
         path: /mcp/tools
-  assets-mcp:
-    label: Asset Allocation Service
+      deployment:
+        type: cloudhub-2.0
+        replicas: 2
+        vCores: 1
+        region: us-east-1
+      exchange:
+        groupId: ${anypoint.organization.id}
+        assetId: postgres-mcp-server
+        version: 1.0.0
+        classifier: mule-application
+      visualizer:
+        enabled: true
+        category: "MCP Servers"
+        
+  assets-mcp-cloudhub:
+    label: Asset Allocation Service (CloudHub)
     metadata:
       transport:
         kind: streamableHttp
         path: /mcp/tools
-  notification-mcp:
-    label: Welcome Notification Service
+      deployment:
+        type: cloudhub-2.0
+        replicas: 1
+        vCores: 0.5
+        region: us-east-1
+      exchange:
+        groupId: ${anypoint.organization.id}
+        assetId: assets-mcp-server
+        version: 1.0.0
+        classifier: mule-application
+      visualizer:
+        enabled: true
+        category: "MCP Servers"
+        
+  notification-mcp-cloudhub:
+    label: Welcome Notification Service (CloudHub)
     metadata:
       transport:
         kind: streamableHttp
         path: /mcp/tools
-
+      deployment:
+        type: cloudhub-2.0
+        replicas: 1
+        vCores: 0.5
+        region: us-east-1
+      exchange:
+        groupId: ${anypoint.organization.id}
+        assetId: notification-mcp-server
+        version: 1.0.0
+        classifier: mule-application
+      visualizer:
+        enabled: true
+        category: "MCP Servers"
 
 connections:
-  hr-agent-connection:
+  hr-agent-cloudhub-connection:
     kind: agent
     ref:
-      name: hr-agent
+      name: hr-agent-cloudhub
     spec:
-      url: ${hr-agent.url}
-  postgres-mcp-connection:
+      url: ${hr-agent-cloudhub.url}
+      security:
+        type: oauth2
+        clientId: ${anypoint.client.id}
+        clientSecret: ${anypoint.client.secret}
+      
+  postgres-mcp-cloudhub-connection:
     kind: mcp
     ref:
-      name: postgres-mcp
+      name: postgres-mcp-cloudhub
     spec:
-      url: ${flexgw.url}/mcp/postgres
-  assets-mcp-connection:
+      url: ${postgres-mcp-cloudhub.url}/mcp/postgres
+      security:
+        type: oauth2
+        clientId: ${anypoint.client.id}
+        clientSecret: ${anypoint.client.secret}
+      
+  assets-mcp-cloudhub-connection:
     kind: mcp
     ref:
-      name: assets-mcp
+      name: assets-mcp-cloudhub
     spec:
-      url: ${flexgw.url}/mcp/assets
-  notification-mcp-connection:
+      url: ${assets-mcp-cloudhub.url}/mcp/assets
+      security:
+        type: oauth2
+        clientId: ${anypoint.client.id}
+        clientSecret: ${anypoint.client.secret}
+      
+  notification-mcp-cloudhub-connection:
     kind: mcp
     ref:
-      name: notification-mcp
+      name: notification-mcp-cloudhub
     spec:
-      url: ${flexgw.url}/mcp/notifications
-  groq-connection:
+      url: ${notification-mcp-cloudhub.url}/mcp/notifications
+      security:
+        type: oauth2
+        clientId: ${anypoint.client.id}
+        clientSecret: ${anypoint.client.secret}
+      
+  openai-connection:
     kind: llm
     ref:
-      name: groq-llm
+      name: anypoint-llm
     spec:
-      url: https://api.groq.com/openai/v1
+      url: https://api.openai.com/v1
       configuration:
-        apiKey: ${groq.apiKey}
+        apiKey: ${openai.apiKey}
         timeout: 600000
+
+# Anypoint Visualizer Configuration
+visualizer:
+  enabled: true
+  dashboard:
+    name: "Employee Onboarding Agent Network"
+    description: "Real-time visualization of employee onboarding workflow"
+  metrics:
+    - name: "onboarding_requests"
+      type: counter
+      description: "Total onboarding requests processed"
+    - name: "onboarding_duration"
+      type: histogram
+      description: "Time taken to complete onboarding"
+    - name: "mcp_server_health"
+      type: gauge
+      description: "Health status of MCP servers"
+  tracing:
+    enabled: true
+    samplingRate: 0.1
+  alerts:
+    - name: "high_error_rate"
+      condition: "error_rate > 0.05"
+      notification: "slack"
+    - name: "slow_onboarding"
+      condition: "onboarding_duration > 30s"
+      notification: "email"
+
+# Exchange Publication Configuration
+exchange:
+  publication:
+    enabled: true
+    assets:
+      - name: "employee-onboarding-agent-network"
+        type: "agent-network"
+        groupId: ${anypoint.organization.id}
+        version: "1.0.0"
+        description: "Complete employee onboarding agent network with MCP servers"
+        tags: ["agent", "mcp", "hr", "onboarding"]
+      - name: "postgres-mcp-server"
+        type: "mule-application"
+        groupId: ${anypoint.organization.id}
+        version: "1.0.0"
+        description: "PostgreSQL MCP Server for employee data management"
+      - name: "assets-mcp-server"
+        type: "mule-application"
+        groupId: ${anypoint.organization.id}
+        version: "1.0.0"
+        description: "Assets MCP Server for equipment allocation"
+      - name: "notification-mcp-server"
+        type: "mule-application"
+        groupId: ${anypoint.organization.id}
+        version: "1.0.0"
+        description: "Notifications MCP Server for welcome messages"

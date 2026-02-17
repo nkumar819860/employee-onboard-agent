@@ -1,24 +1,188 @@
 {
-  "name": "employee-onboarding-agent-network",
+  "name": "employee-onboarding-agent-network-anypoint",
   "version": "1.0.0",
+  "description": "Employee Onboarding Agent Network deployed on Anypoint Platform with CloudHub 2.0",
+  "platform": "anypoint",
   "variables": {
-    "hr-agent.url": "http://localhost:8081",
-    "flexgw.url": "http://localhost:8082",
-    "groq.apiKey": "${GROQ_API_KEY}",
-    "mulesoft.api.url": "http://localhost:8081/broker",
-    "postgres.mcp.url": "http://localhost:8081/mcp/postgres",
-    "assets.mcp.url": "http://localhost:8081/mcp/assets",
-    "notifications.mcp.url": "http://localhost:8081/mcp/notifications"
+    "anypoint.organization.id": "${ANYPOINT_ORG_ID}",
+    "anypoint.environment.name": "${ANYPOINT_ENV:-Sandbox}",
+    "anypoint.client.id": "${ANYPOINT_CLIENT_ID}",
+    "anypoint.client.secret": "${ANYPOINT_CLIENT_SECRET}",
+    "anypoint.visualizer.dashboard.id": "${VISUALIZER_DASHBOARD_ID}",
+    "openai.apiKey": "${OPENAI_API_KEY}",
+    "openai.endpoint": "https://api.openai.com/v1",
+    "cloudhub.url": "https://${CLOUDHUB_DOMAIN}",
+    "hr-agent-cloudhub.url": "https://hr-agent-${ANYPOINT_ENV}.${CLOUDHUB_REGION}.cloudhub.io",
+    "postgres-mcp-cloudhub.url": "https://postgres-mcp-${ANYPOINT_ENV}.${CLOUDHUB_REGION}.cloudhub.io",
+    "assets-mcp-cloudhub.url": "https://assets-mcp-${ANYPOINT_ENV}.${CLOUDHUB_REGION}.cloudhub.io",
+    "notification-mcp-cloudhub.url": "https://notification-mcp-${ANYPOINT_ENV}.${CLOUDHUB_REGION}.cloudhub.io",
+    "postgres.host": "${POSTGRES_HOST:-postgres.${ANYPOINT_ENV}.cloudhub.io}",
+    "postgres.port": "${POSTGRES_PORT:-5432}",
+    "postgres.database": "${POSTGRES_DB:-onboarding}",
+    "postgres.username": "${POSTGRES_USER:-mule}",
+    "postgres.password": "${POSTGRES_PASSWORD}"
   },
   "agents": [
     {
-      "name": "hr-agent",
+      "name": "hr-agent-cloudhub",
       "mcpServers": {
-        "mulesoft-onboarding": {
-          "url": "${hr-agent.url}/mcp"
+        "postgres-mcp": {
+          "url": "${postgres-mcp-cloudhub.url}/mcp"
+        },
+        "assets-mcp": {
+          "url": "${assets-mcp-cloudhub.url}/mcp"
+        },
+        "notification-mcp": {
+          "url": "${notification-mcp-cloudhub.url}/mcp"
+        }
+      },
+      "deployment": {
+        "platform": "cloudhub-2.0",
+        "region": "${CLOUDHUB_REGION:-us-east-1}",
+        "environment": "${ANYPOINT_ENV:-Sandbox}",
+        "replicas": 2,
+        "vCores": 1,
+        "memory": "1.5Gi",
+        "objectStore": "persistent",
+        "monitoring": {
+          "enabled": true,
+          "visualizer": true,
+          "alerts": true
         }
       }
     }
   ],
-  "dependencies": []
+  "mcpServers": [
+    {
+      "name": "postgres-mcp-cloudhub",
+      "deployment": {
+        "platform": "cloudhub-2.0",
+        "region": "${CLOUDHUB_REGION:-us-east-1}",
+        "environment": "${ANYPOINT_ENV:-Sandbox}",
+        "replicas": 2,
+        "vCores": 1,
+        "memory": "1.5Gi"
+      },
+      "exchange": {
+        "publish": true,
+        "groupId": "${anypoint.organization.id}",
+        "assetId": "postgres-mcp-server",
+        "version": "1.0.0",
+        "classifier": "mule-application"
+      }
+    },
+    {
+      "name": "assets-mcp-cloudhub", 
+      "deployment": {
+        "platform": "cloudhub-2.0",
+        "region": "${CLOUDHUB_REGION:-us-east-1}",
+        "environment": "${ANYPOINT_ENV:-Sandbox}",
+        "replicas": 1,
+        "vCores": 0.5,
+        "memory": "1Gi"
+      },
+      "exchange": {
+        "publish": true,
+        "groupId": "${anypoint.organization.id}",
+        "assetId": "assets-mcp-server",
+        "version": "1.0.0",
+        "classifier": "mule-application"
+      }
+    },
+    {
+      "name": "notification-mcp-cloudhub",
+      "deployment": {
+        "platform": "cloudhub-2.0", 
+        "region": "${CLOUDHUB_REGION:-us-east-1}",
+        "environment": "${ANYPOINT_ENV:-Sandbox}",
+        "replicas": 1,
+        "vCores": 0.5,
+        "memory": "1Gi"
+      },
+      "exchange": {
+        "publish": true,
+        "groupId": "${anypoint.organization.id}",
+        "assetId": "notification-mcp-server",
+        "version": "1.0.0",
+        "classifier": "mule-application"
+      }
+    }
+  ],
+  "visualizer": {
+    "enabled": true,
+    "dashboard": {
+      "name": "Employee Onboarding Agent Network",
+      "description": "Real-time visualization of employee onboarding workflow on Anypoint Platform"
+    },
+    "components": [
+      {
+        "name": "HR Agent",
+        "type": "agent",
+        "category": "Agents",
+        "runtime": "cloudhub-2.0"
+      },
+      {
+        "name": "PostgreSQL MCP",
+        "type": "mcp-server", 
+        "category": "MCP Servers",
+        "runtime": "cloudhub-2.0"
+      },
+      {
+        "name": "Assets MCP",
+        "type": "mcp-server",
+        "category": "MCP Servers", 
+        "runtime": "cloudhub-2.0"
+      },
+      {
+        "name": "Notification MCP",
+        "type": "mcp-server",
+        "category": "MCP Servers",
+        "runtime": "cloudhub-2.0"
+      }
+    ],
+    "flows": [
+      {
+        "from": "HR Agent",
+        "to": "PostgreSQL MCP",
+        "label": "Employee Creation"
+      },
+      {
+        "from": "HR Agent", 
+        "to": "Assets MCP",
+        "label": "Asset Allocation"
+      },
+      {
+        "from": "HR Agent",
+        "to": "Notification MCP", 
+        "label": "Welcome Notification"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "name": "anypoint-mule-runtime",
+      "version": "4.6.x",
+      "scope": "runtime"
+    },
+    {
+      "name": "mcp-connector",
+      "version": "1.0.x",
+      "scope": "compile"
+    },
+    {
+      "name": "database-connector", 
+      "version": "1.14.x",
+      "scope": "compile"
+    },
+    {
+      "name": "http-connector",
+      "version": "1.7.x", 
+      "scope": "compile"
+    },
+    {
+      "name": "email-connector",
+      "version": "1.4.x",
+      "scope": "compile"
+    }
+  ]
 }
