@@ -1,0 +1,11 @@
+{
+  "main": "employee-onboarding-api.raml",
+  "name": "employee-onboarding-api",
+  "classifier": "raml",
+  "organizationId": "980c5346-1838-46a0-a1d9-42a6f8bf34a5",
+  "descriptorVersion": "1.0.0",
+  "groupId": "980c5346-1838-46a0-a1d9-42a6f8bf34a5",
+  "assetId": "employee-onboarding-api",
+  "version": "1.0.0",
+  "tags": []
+}

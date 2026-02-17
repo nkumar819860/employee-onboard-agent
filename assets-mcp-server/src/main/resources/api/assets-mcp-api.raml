@@ -1,0 +1,292 @@
+#%RAML 1.0
+
+title: Assets MCP Server API
+version: v1
+baseUri: https://assets-mcp-{env}.cloudhub.io
+protocols: [ HTTPS ]
+mediaType: application/json
+
+description: |
+  Assets MCP Server for Employee Onboarding - Provides equipment allocation
+  and inventory management with MCP (Model Context Protocol) integration
+  for agent fabric capabilities.
+
+securitySchemes:
+  oauth_2_0:
+    description: OAuth 2.0 authentication for secure access
+    type: OAuth 2.0
+    describedBy:
+      headers:
+        Authorization:
+          description: Bearer token for authentication
+          type: string
+          pattern: ^Bearer .+
+      responses:
+        401:
+          description: Unauthorized - Invalid or missing token
+    settings:
+      authorizationUri: https://auth.anypoint.mulesoft.com/oauth2/authorize
+      accessTokenUri: https://auth.anypoint.mulesoft.com/oauth2/token
+      authorizationGrants: [ client_credentials ]
+
+types:
+  Asset:
+    type: object
+    properties:
+      assetType:
+        type: string
+        description: Type of asset
+        example: "laptop"
+      assetId:
+        type: string
+        description: Unique asset identifier
+        example: "ASSET-LAPTOP-20240115103000"
+      status:
+        type: string
+        enum: [available, allocated, maintenance]
+        description: Asset status
+        example: "allocated"
+      assignedAt:
+        type: datetime
+        description: Assignment timestamp
+        example: "2024-01-15T10:30:00Z"
+        
+  AssetAllocationInput:
+    type: object
+    properties:
+      employeeId:
+        type: string
+        required: true
+        description: Employee ID to allocate assets to
+        example: "123"
+      assets:
+        type: array
+        items:
+          type: string
+        required: true
+        description: Array of asset types to allocate
+        example: ["laptop", "id-card", "bag"]
+        
+  AssetAllocationResponse:
+    type: object
+    properties:
+      employeeId:
+        type: string
+        description: Employee ID
+        example: "123"
+      allocatedAssets:
+        type: array
+        items: Asset
+        description: List of allocated assets
+      totalAssetsAllocated:
+        type: integer
+        description: Total number of assets allocated
+        example: 3
+      allocationStatus:
+        type: string
+        enum: [success, partial, failed]
+        description: Overall allocation status
+        example: "success"
+        
+  InventoryItem:
+    type: object
+    properties:
+      available:
+        type: integer
+        description: Number of available items
+        example: 25
+      allocated:
+        type: integer
+        description: Number of allocated items
+        example: 15
+      total:
+        type: integer
+        description: Total number of items
+        example: 40
+      models:
+        type: array
+        items:
+          type: string
+        description: Available models/types
+        example: ["Dell Latitude 5520", "MacBook Pro 13"]
+        
+  MCPTool:
+    type: object
+    properties:
+      name:
+        type: string
+        description: Tool name
+        example: "allocate-assets"
+      description:
+        type: string
+        description: Tool description
+        example: "Allocate equipment assets to an employee"
+      inputSchema:
+        type: object
+        description: JSON schema for tool input parameters
+
+/mcp:
+  /tools:
+    get:
+      description: List all available MCP tools for agent integration
+      securedBy: [ oauth_2_0 ]
+      responses:
+        200:
+          description: Successfully retrieved MCP tools list
+          body:
+            application/json:
+              type: object
+              properties:
+                tools:
+                  type: array
+                  items: MCPTool
+              example: |
+                {
+                  "tools": [
+                    {
+                      "name": "allocate-assets",
+                      "description": "Allocate equipment assets to an employee (laptop, ID card, bag)",
+                      "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                          "employeeId": {"type": "string"},
+                          "assets": {
+                            "type": "array", 
+                            "items": {"type": "string"},
+                            "description": "Array of asset types to allocate"
+                          }
+                        },
+                        "required": ["employeeId", "assets"]
+                      }
+                    },
+                    {
+                      "name": "get-asset-inventory",
+                      "description": "Get current asset inventory status",
+                      "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                          "assetType": {"type": "string", "description": "Type of asset to check"}
+                        }
+                      }
+                    }
+                  ]
+                }
+        500:
+          description: Internal server error
+          
+  /tools/allocate-assets:
+    post:
+      description: Allocate equipment assets to an employee
+      securedBy: [ oauth_2_0 ]
+      body:
+        application/json:
+          type: AssetAllocationInput
+      responses:
+        200:
+          description: Assets allocated successfully
+          body:
+            application/json:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "success"
+                message:
+                  type: string
+                  example: "Assets successfully allocated to employee 123"
+                allocation:
+                  type: AssetAllocationResponse
+        400:
+          description: Bad request - Invalid input parameters
+          body:
+            application/json:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "error"
+                message:
+                  type: string
+                  example: "Invalid input: employeeId is required"
+        404:
+          description: Employee not found
+          body:
+            application/json:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "error"
+                message:
+                  type: string
+                  example: "Employee not found"
+        500:
+          description: Internal server error
+          
+  /tools/get-asset-inventory:
+    post:
+      description: Get current asset inventory status
+      securedBy: [ oauth_2_0 ]
+      body:
+        application/json:
+          type: object
+          properties:
+            assetType:
+              type: string
+              required: false
+              description: Type of asset to check (optional, returns all if not specified)
+              example: "laptop"
+      responses:
+        200:
+          description: Inventory retrieved successfully
+          body:
+            application/json:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "success"
+                data:
+                  type: object
+                  properties:
+                    inventoryType:
+                      type: string
+                      example: "laptop"
+                    inventory:
+                      type: InventoryItem | object
+                    summary:
+                      type: object
+                      properties:
+                        totalAssets:
+                          type: integer
+                          example: 175
+                        totalAvailable:
+                          type: integer
+                          example: 110
+                        totalAllocated:
+                          type: integer
+                          example: 65
+        400:
+          description: Bad request - Invalid asset type
+        500:
+          description: Internal server error
+
+/health:
+  get:
+    description: Health check endpoint
+    responses:
+      200:
+        description: Service is healthy
+        body:
+          application/json:
+            type: object
+            properties:
+              status:
+                type: string
+                example: "UP"
+              timestamp:
+                type: datetime
+                example: "2024-01-15T10:30:00Z"
+              inventory:
+                type: string
+                example: "connected"

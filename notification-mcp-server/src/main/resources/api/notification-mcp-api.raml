@@ -1,0 +1,388 @@
+#%RAML 1.0
+
+title: Notification MCP Server API
+version: v1
+baseUri: https://notification-mcp-{env}.cloudhub.io
+protocols: [ HTTPS ]
+mediaType: application/json
+
+description: |
+  Notification MCP Server for Employee Onboarding - Provides multi-channel
+  notification services (email, SMS) with MCP (Model Context Protocol) 
+  integration for agent fabric capabilities.
+
+securitySchemes:
+  oauth_2_0:
+    description: OAuth 2.0 authentication for secure access
+    type: OAuth 2.0
+    describedBy:
+      headers:
+        Authorization:
+          description: Bearer token for authentication
+          type: string
+          pattern: ^Bearer .+
+      responses:
+        401:
+          description: Unauthorized - Invalid or missing token
+    settings:
+      authorizationUri: https://auth.anypoint.mulesoft.com/oauth2/authorize
+      accessTokenUri: https://auth.anypoint.mulesoft.com/oauth2/token
+      authorizationGrants: [ client_credentials ]
+
+types:
+  NotificationInput:
+    type: object
+    properties:
+      employeeId:
+        type: string
+        required: true
+        description: Employee ID for notification
+        example: "123"
+      email:
+        type: string
+        required: true
+        description: Employee email address
+        pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+        example: "john.doe@company.com"
+      name:
+        type: string
+        required: true
+        description: Employee full name
+        example: "John Doe"
+      phone:
+        type: string
+        required: false
+        description: Employee phone number for SMS
+        pattern: ^\+?[1-9]\d{1,14}$
+        example: "+1234567890"
+      templateType:
+        type: string
+        enum: [welcome, asset_allocated, onboarding_complete]
+        description: Notification template type
+        example: "welcome"
+        
+  EmailNotificationInput:
+    type: object
+    properties:
+      employeeId:
+        type: string
+        required: true
+        description: Employee ID
+        example: "123"
+      email:
+        type: string
+        required: true
+        description: Recipient email address
+        pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+        example: "john.doe@company.com"
+      name:
+        type: string
+        required: true
+        description: Employee full name
+        example: "John Doe"
+      subject:
+        type: string
+        required: false
+        description: Custom email subject
+        example: "Welcome to MuleSoft!"
+      message:
+        type: string
+        required: false
+        description: Custom message content
+        example: "We are excited to have you join our team!"
+        
+  SMSNotificationInput:
+    type: object
+    properties:
+      employeeId:
+        type: string
+        required: true
+        description: Employee ID
+        example: "123"
+      phone:
+        type: string
+        required: true
+        description: Phone number for SMS
+        pattern: ^\+?[1-9]\d{1,14}$
+        example: "+1234567890"
+      name:
+        type: string
+        required: true
+        description: Employee full name
+        example: "John Doe"
+      message:
+        type: string
+        required: false
+        description: Custom SMS message
+        example: "Welcome to MuleSoft! Your onboarding starts tomorrow."
+        
+  NotificationResponse:
+    type: object
+    properties:
+      status:
+        type: string
+        enum: [sent, failed, pending]
+        description: Notification delivery status
+        example: "sent"
+      messageId:
+        type: string
+        description: Unique message identifier
+        example: "msg_20240115103000_123"
+      timestamp:
+        type: datetime
+        description: Notification timestamp
+        example: "2024-01-15T10:30:00Z"
+      recipient:
+        type: string
+        description: Notification recipient
+        example: "john.doe@company.com"
+      channel:
+        type: string
+        enum: [email, sms, push]
+        description: Notification channel used
+        example: "email"
+        
+  MCPTool:
+    type: object
+    properties:
+      name:
+        type: string
+        description: Tool name
+        example: "send-welcome-email"
+      description:
+        type: string
+        description: Tool description
+        example: "Send welcome email to new employee"
+      inputSchema:
+        type: object
+        description: JSON schema for tool input parameters
+
+/mcp:
+  /tools:
+    get:
+      description: List all available MCP tools for agent integration
+      securedBy: [ oauth_2_0 ]
+      responses:
+        200:
+          description: Successfully retrieved MCP tools list
+          body:
+            application/json:
+              type: object
+              properties:
+                tools:
+                  type: array
+                  items: MCPTool
+              example: |
+                {
+                  "tools": [
+                    {
+                      "name": "send-welcome-email",
+                      "description": "Send welcome email to new employee",
+                      "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                          "employeeId": {"type": "string"},
+                          "email": {"type": "string"},
+                          "name": {"type": "string"}
+                        },
+                        "required": ["employeeId", "email", "name"]
+                      }
+                    },
+                    {
+                      "name": "send-sms-notification",
+                      "description": "Send SMS notification to employee",
+                      "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                          "employeeId": {"type": "string"},
+                          "phone": {"type": "string"},
+                          "name": {"type": "string"},
+                          "message": {"type": "string"}
+                        },
+                        "required": ["employeeId", "phone", "name"]
+                      }
+                    },
+                    {
+                      "name": "send-onboarding-complete",
+                      "description": "Send onboarding completion notification",
+                      "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                          "employeeId": {"type": "string"},
+                          "email": {"type": "string"},
+                          "name": {"type": "string"}
+                        },
+                        "required": ["employeeId", "email", "name"]
+                      }
+                    }
+                  ]
+                }
+        500:
+          description: Internal server error
+          
+  /tools/send-welcome-email:
+    post:
+      description: Send welcome email to new employee
+      securedBy: [ oauth_2_0 ]
+      body:
+        application/json:
+          type: EmailNotificationInput
+      responses:
+        200:
+          description: Email sent successfully
+          body:
+            application/json:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "success"
+                message:
+                  type: string
+                  example: "Welcome email sent successfully"
+                notification:
+                  type: NotificationResponse
+        400:
+          description: Bad request - Invalid input parameters
+          body:
+            application/json:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "error"
+                message:
+                  type: string
+                  example: "Invalid email address format"
+        500:
+          description: Internal server error - Email service unavailable
+          
+  /tools/send-sms-notification:
+    post:
+      description: Send SMS notification to employee
+      securedBy: [ oauth_2_0 ]
+      body:
+        application/json:
+          type: SMSNotificationInput
+      responses:
+        200:
+          description: SMS sent successfully
+          body:
+            application/json:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "success"
+                message:
+                  type: string
+                  example: "SMS notification sent successfully"
+                notification:
+                  type: NotificationResponse
+        400:
+          description: Bad request - Invalid phone number format
+        500:
+          description: Internal server error - SMS service unavailable
+          
+  /tools/send-onboarding-complete:
+    post:
+      description: Send onboarding completion notification
+      securedBy: [ oauth_2_0 ]
+      body:
+        application/json:
+          type: EmailNotificationInput
+      responses:
+        200:
+          description: Onboarding completion notification sent
+          body:
+            application/json:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "success"
+                message:
+                  type: string
+                  example: "Onboarding completion notification sent"
+                notification:
+                  type: NotificationResponse
+        400:
+          description: Bad request - Invalid input parameters
+        500:
+          description: Internal server error
+
+/notifications:
+  /status/{messageId}:
+    uriParameters:
+      messageId:
+        type: string
+        description: Message ID to check status
+        example: "msg_20240115103000_123"
+    get:
+      description: Check notification delivery status
+      securedBy: [ oauth_2_0 ]
+      responses:
+        200:
+          description: Status retrieved successfully
+          body:
+            application/json:
+              type: NotificationResponse
+        404:
+          description: Message not found
+        500:
+          description: Internal server error
+          
+  /templates:
+    get:
+      description: List available notification templates
+      securedBy: [ oauth_2_0 ]
+      responses:
+        200:
+          description: Templates retrieved successfully
+          body:
+            application/json:
+              type: object
+              properties:
+                templates:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: "welcome"
+                      type:
+                        type: string
+                        enum: [email, sms]
+                        example: "email"
+                      subject:
+                        type: string
+                        example: "Welcome to {{company}}!"
+                      content:
+                        type: string
+                        example: "Dear {{name}}, welcome to our team!"
+        500:
+          description: Internal server error
+
+/health:
+  get:
+    description: Health check endpoint
+    responses:
+      200:
+        description: Service is healthy
+        body:
+          application/json:
+            type: object
+            properties:
+              status:
+                type: string
+                example: "UP"
+              timestamp:
+                type: datetime
+                example: "2024-01-15T10:30:00Z"
+              email:
+                type: string
+                example: "connected"
+              sms:
+                type: string
+                example: "connected"

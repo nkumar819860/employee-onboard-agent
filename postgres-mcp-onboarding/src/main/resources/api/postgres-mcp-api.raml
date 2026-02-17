@@ -1,0 +1,243 @@
+#%RAML 1.0
+
+title: PostgreSQL MCP Server API
+version: v1
+baseUri: https://postgres-mcp-{env}.cloudhub.io
+protocols: [ HTTPS ]
+mediaType: application/json
+
+description: |
+  PostgreSQL MCP Server for Employee Onboarding - Provides database operations
+  for employee data management with MCP (Model Context Protocol) integration
+  for agent fabric capabilities.
+
+securitySchemes:
+  oauth_2_0:
+    description: OAuth 2.0 authentication for secure access
+    type: OAuth 2.0
+    describedBy:
+      headers:
+        Authorization:
+          description: Bearer token for authentication
+          type: string
+          pattern: ^Bearer .+
+      responses:
+        401:
+          description: Unauthorized - Invalid or missing token
+    settings:
+      authorizationUri: https://auth.anypoint.mulesoft.com/oauth2/authorize
+      accessTokenUri: https://auth.anypoint.mulesoft.com/oauth2/token
+      authorizationGrants: [ client_credentials ]
+
+types:
+  Employee:
+    type: object
+    properties:
+      id:
+        type: integer
+        description: Unique employee identifier
+        example: 123
+      name:
+        type: string
+        description: Employee full name
+        example: "John Doe"
+      email:
+        type: string
+        description: Employee email address
+        pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+        example: "john.doe@company.com"
+      status:
+        type: string
+        enum: [pending, active, inactive]
+        description: Employee onboarding status
+        example: "pending"
+      created_at:
+        type: datetime
+        description: Employee creation timestamp
+        example: "2024-01-15T10:30:00Z"
+        
+  EmployeeInput:
+    type: object
+    properties:
+      name:
+        type: string
+        required: true
+        description: Employee full name
+        example: "John Doe"
+      email:
+        type: string
+        required: true
+        description: Employee email address
+        pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+        example: "john.doe@company.com"
+        
+  MCPTool:
+    type: object
+    properties:
+      name:
+        type: string
+        description: Tool name
+        example: "create-employee"
+      description:
+        type: string
+        description: Tool description
+        example: "Create a new employee record in the database"
+      inputSchema:
+        type: object
+        description: JSON schema for tool input parameters
+
+/mcp:
+  /tools:
+    get:
+      description: List all available MCP tools for agent integration
+      securedBy: [ oauth_2_0 ]
+      responses:
+        200:
+          description: Successfully retrieved MCP tools list
+          body:
+            application/json:
+              type: object
+              properties:
+                tools:
+                  type: array
+                  items: MCPTool
+              example: |
+                {
+                  "tools": [
+                    {
+                      "name": "create-employee",
+                      "description": "Create a new employee record in the database",
+                      "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                          "name": {"type": "string"},
+                          "email": {"type": "string"}
+                        },
+                        "required": ["name", "email"]
+                      }
+                    },
+                    {
+                      "name": "get-employee",
+                      "description": "Get employee details by ID",
+                      "inputSchema": {
+                        "type": "object", 
+                        "properties": {
+                          "employeeId": {"type": "integer"}
+                        },
+                        "required": ["employeeId"]
+                      }
+                    }
+                  ]
+                }
+        500:
+          description: Internal server error
+          
+  /tools/create-employee:
+    post:
+      description: Create a new employee record in the database
+      securedBy: [ oauth_2_0 ]
+      body:
+        application/json:
+          type: EmployeeInput
+      responses:
+        200:
+          description: Employee created successfully
+          body:
+            application/json:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "created"
+                employeeId:
+                  type: integer
+                  example: 123
+                message:
+                  type: string
+                  example: "Employee successfully created with ID: 123"
+        400:
+          description: Bad request - Invalid input parameters
+          body:
+            application/json:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "error"
+                message:
+                  type: string
+                  example: "Invalid input: missing required field 'email'"
+        500:
+          description: Internal server error
+          body:
+            application/json:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "error"
+                message:
+                  type: string
+                  example: "Database connection failed"
+                  
+  /tools/get-employee:
+    post:
+      description: Retrieve employee details by ID
+      securedBy: [ oauth_2_0 ]
+      body:
+        application/json:
+          type: object
+          properties:
+            employeeId:
+              type: integer
+              required: true
+              description: Employee ID to retrieve
+              example: 123
+      responses:
+        200:
+          description: Employee found and returned
+          body:
+            application/json:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "found"
+                employee:
+                  type: Employee
+        404:
+          description: Employee not found
+          body:
+            application/json:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "not_found"
+                message:
+                  type: string
+                  example: "Employee not found"
+        400:
+          description: Bad request - Invalid employee ID
+        500:
+          description: Internal server error
+
+/health:
+  get:
+    description: Health check endpoint
+    responses:
+      200:
+        description: Service is healthy
+        body:
+          application/json:
+            type: object
+            properties:
+              status:
+                type: string
+                example: "UP"
+              timestamp:
+                type: datetime
+                example: "2024-01-15T10:30:00Z"
+              database:
+                type: string
+                example: "connected"

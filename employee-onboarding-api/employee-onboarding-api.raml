@@ -1,0 +1,268 @@
+#%RAML 1.0
+
+title: Employee Onboarding API
+version: v1
+baseUri: https://api.example.com/onboarding
+protocols: [ HTTPS ]
+mediaType: application/json
+securitySchemes:
+  oauth_2_0:
+    description: OAuth 2.0 authentication
+    type: OAuth 2.0
+    describedBy:
+      headers:
+        Authorization:
+          description: Access token
+          type: string
+      responses:
+        401:
+          description: Unauthorized
+    settings:
+      authorizationUri: https://auth.example.com/oauth2/authorize
+      accessTokenUri: https://auth.example.com/oauth2/token
+      authorizationGrants: [ authorization_code, client_credentials ]
+
+/employee:
+  post:
+    description: Create a new employee
+    securedBy: [ oauth_2_0 ]
+    body:
+      application/json:
+        type: object
+        properties:
+          name:
+            type: string
+            example: John Doe
+          email:
+            type: string
+            example: john.doe@example.com
+          position:
+            type: string
+            example: Software Engineer
+    responses:
+      201:
+        body:
+          application/json:
+            example: |
+              {
+                "id": "123",
+                "name": "John Doe",
+                "email": "john.doe@example.com",
+                "position": "Software Engineer"
+              }
+      400:
+        description: Bad Request
+      500:
+        description: Internal Server Error
+
+  get:
+    description: Get employee details
+    securedBy: [ oauth_2_0 ]
+    queryParameters:
+      id:
+        description: Employee ID
+        type: string
+        required: true
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                "id": "123",
+                "name": "John Doe",
+                "email": "john.doe@example.com",
+                "position": "Software Engineer"
+              }
+      404:
+        description: Employee not found
+      500:
+        description: Internal Server Error
+
+  put:
+    description: Update employee details
+    securedBy: [ oauth_2_0 ]
+    body:
+      application/json:
+        type: object
+        properties:
+          id:
+            type: string
+            example: "123"
+          name:
+            type: string
+            example: John Doe
+          email:
+            type: string
+            example: john.doe@example.com
+          position:
+            type: string
+            example: Software Engineer
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                "id": "123",
+                "name": "John Doe",
+                "email": "john.doe@example.com",
+                "position": "Software Engineer"
+              }
+      400:
+        description: Bad Request
+      404:
+        description: Employee not found
+      500:
+        description: Internal Server Error
+
+/asset:
+  post:
+    description: Allocate assets to an employee
+    securedBy: [ oauth_2_0 ]
+    body:
+      application/json:
+        type: object
+        properties:
+          employeeId:
+            type: string
+            example: "123"
+          assets:
+            type: array
+            items:
+              type: string
+            example: [ "Laptop", "Phone" ]
+    responses:
+      201:
+        body:
+          application/json:
+            example: |
+              {
+                "employeeId": "123",
+                "assets": [ "Laptop", "Phone" ]
+              }
+      400:
+        description: Bad Request
+      500:
+        description: Internal Server Error
+
+  get:
+    description: Check asset inventory
+    securedBy: [ oauth_2_0 ]
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                "assets": [ "Laptop", "Phone", "Monitor" ]
+              }
+      500:
+        description: Internal Server Error
+
+/notification:
+  post:
+    description: Send notifications
+    securedBy: [ oauth_2_0 ]
+    body:
+      application/json:
+        type: object
+        properties:
+          type:
+            type: string
+            enum: [ "email", "sms" ]
+            example: email
+          recipient:
+            type: string
+            example: john.doe@example.com
+          message:
+            type: string
+            example: Welcome to the company!
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                "status": "Notification sent"
+              }
+      400:
+        description: Bad Request
+      500:
+        description: Internal Server Error
+
+/mcp:
+  /tools:
+    get:
+      description: List available MCP tools for agent fabric integration
+      securedBy: [ oauth_2_0 ]
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                  "tools": [
+                    {
+                      "name": "create-employee",
+                      "description": "Create a new employee record",
+                      "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                          "name": {"type": "string"},
+                          "email": {"type": "string"}
+                        }
+                      }
+                    },
+                    {
+                      "name": "allocate-assets", 
+                      "description": "Allocate equipment to employee",
+                      "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                          "employeeId": {"type": "string"},
+                          "assets": {"type": "array"}
+                        }
+                      }
+                    }
+                  ]
+                }
+        500:
+          description: Internal Server Error
+          
+  /tools/{toolName}:
+    uriParameters:
+      toolName:
+        type: string
+        description: Name of the MCP tool to execute
+        example: create-employee
+    post:
+      description: Execute specific MCP tool for agent fabric integration
+      securedBy: [ oauth_2_0 ]
+      body:
+        application/json:
+          type: object
+          description: Tool-specific input parameters
+          example: |
+            {
+              "name": "John Doe",
+              "email": "john@company.com"
+            }
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                  "status": "success",
+                  "result": {
+                    "employeeId": "123",
+                    "message": "Employee created successfully"
+                  }
+                }
+        400:
+          description: Bad Request - Invalid tool parameters
+        404:
+          description: Tool not found
+        500:
+          description: Internal Server Error
