@@ -1,15 +1,99 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
-    <flow name="create-employee">
-        <http:listener config-ref="http-config" path="/mcp/tools/create-employee" allowedMethods="POST"/>
-        <db:insert config-ref="postgres-config">
-            <db:sql>INSERT INTO employees (name, email, status) VALUES (#[payload.name], #[payload.email], 'pending')</db:sql>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:mcp="http://www.mulesoft.org/schema/mule/mcp" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mcp http://www.mulesoft.org/schema/mule/mcp/current/mule-mcp.xsd">
+    
+    <!-- MCP Tools Endpoint for listing available tools -->
+    <flow name="mcp-tools-list">
+        <http:listener config-ref="http-config" path="/mcp/tools" allowedMethods="GET" doc:name="HTTP Listener"/>
+        <mcp:list-tools config-ref="Mcp_Config" doc:name="List MCP Tools"/>
+        <set-payload value='#[{
+            "tools": [
+                {
+                    "name": "create-employee",
+                    "description": "Create a new employee record in the database",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "email": {"type": "string"}
+                        },
+                        "required": ["name", "email"]
+                    }
+                },
+                {
+                    "name": "get-employee",
+                    "description": "Get employee details by ID",
+                    "inputSchema": {
+                        "type": "object", 
+                        "properties": {
+                            "employeeId": {"type": "integer"}
+                        },
+                        "required": ["employeeId"]
+                    }
+                }
+            ]
+        }]' doc:name="Set Available Tools"/>
+    </flow>
+    
+    <!-- MCP Tool: Create Employee -->
+    <flow name="create-employee-mcp">
+        <http:listener config-ref="http-config" path="/mcp/tools/create-employee" allowedMethods="POST" doc:name="HTTP Listener"/>
+        <logger level="INFO" message="Creating employee: #[payload]" doc:name="Log Request"/>
+        <db:insert config-ref="postgres-config" doc:name="Insert Employee">
+            <db:sql>INSERT INTO employees (name, email, status) VALUES (:name, :email, 'pending') RETURNING id</db:sql>
+            <db:input-parameters><![CDATA[#[{
+                name: payload.name,
+                email: payload.email
+            }]]]></db:input-parameters>
         </db:insert>
-        <set-payload value="#[{'status': 'created', 'employeeId': payload}]"/>
+        <set-payload value='#[{
+            "status": "created", 
+            "employeeId": payload[0].id,
+            "message": "Employee successfully created with ID: " ++ payload[0].id
+        }]' doc:name="Set Success Response"/>
         <error-handler>
-            <on-error-propagate enableNotifications="true" logException="true">
-                <logger level="ERROR" message="Error occurred: #[error.description]"/>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="Error Handler">
+                <logger level="ERROR" message="Error creating employee: #[error.description]" doc:name="Log Error"/>
+                <set-payload value='#[{
+                    "status": "error",
+                    "message": error.description
+                }]' doc:name="Set Error Response"/>
             </on-error-propagate>
         </error-handler>
     </flow>
+    
+    <!-- MCP Tool: Get Employee -->
+    <flow name="get-employee-mcp">
+        <http:listener config-ref="http-config" path="/mcp/tools/get-employee" allowedMethods="POST" doc:name="HTTP Listener"/>
+        <logger level="INFO" message="Getting employee: #[payload.employeeId]" doc:name="Log Request"/>
+        <db:select config-ref="postgres-config" doc:name="Select Employee">
+            <db:sql>SELECT id, name, email, status, created_at FROM employees WHERE id = :employeeId</db:sql>
+            <db:input-parameters><![CDATA[#[{
+                employeeId: payload.employeeId
+            }]]]></db:input-parameters>
+        </db:select>
+        <choice doc:name="Check if Employee Found">
+            <when expression="#[sizeOf(payload) > 0]">
+                <set-payload value='#[{
+                    "status": "found",
+                    "employee": payload[0]
+                }]' doc:name="Set Employee Data"/>
+            </when>
+            <otherwise>
+                <set-payload value='#[{
+                    "status": "not_found",
+                    "message": "Employee not found"
+                }]' doc:name="Set Not Found Response"/>
+            </otherwise>
+        </choice>
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="Error Handler">
+                <logger level="ERROR" message="Error getting employee: #[error.description]" doc:name="Log Error"/>
+                <set-payload value='#[{
+                    "status": "error",
+                    "message": error.description
+                }]' doc:name="Set Error Response"/>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    
 </mule>

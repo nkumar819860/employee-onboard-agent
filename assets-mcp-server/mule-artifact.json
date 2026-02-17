@@ -1,0 +1,7 @@
+{
+  "name": "assets-mcp-server",
+  "minMuleVersion": "4.9.5",
+  "javaSpecificationVersions": [
+    "17"
+  ]
+}

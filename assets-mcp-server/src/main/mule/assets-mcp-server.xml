@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:mcp="http://www.mulesoft.org/schema/mule/mcp" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mcp http://www.mulesoft.org/schema/mule/mcp/current/mule-mcp.xsd">
+    
+    <!-- MCP Tools Endpoint for listing available tools -->
+    <flow name="mcp-tools-list">
+        <http:listener config-ref="http-config" path="/mcp/tools" allowedMethods="GET" doc:name="HTTP Listener"/>
+        <mcp:list-tools config-ref="Mcp_Config" doc:name="List MCP Tools"/>
+        <set-payload value='#[{
+            "tools": [
+                {
+                    "name": "allocate-assets",
+                    "description": "Allocate equipment assets to an employee (laptop, ID card, bag)",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "employeeId": {"type": "string"},
+                            "assets": {
+                                "type": "array", 
+                                "items": {"type": "string"},
+                                "description": "Array of asset types to allocate"
+                            }
+                        },
+                        "required": ["employeeId", "assets"]
+                    }
+                },
+                {
+                    "name": "get-asset-inventory",
+                    "description": "Get current asset inventory status",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "assetType": {"type": "string", "description": "Type of asset to check"}
+                        }
+                    }
+                }
+            ]
+        }]' doc:name="Set Available Tools"/>
+    </flow>
+    
+    <!-- MCP Tool: Allocate Assets -->
+    <flow name="allocate-assets-mcp">
+        <http:listener config-ref="http-config" path="/mcp/tools/allocate-assets" allowedMethods="POST" doc:name="HTTP Listener"/>
+        <logger level="INFO" message="Allocating assets for employee: #[payload.employeeId] - Assets: #[payload.assets]" doc:name="Log Request"/>
+        
+        <!-- Simulate asset allocation logic -->
+        <ee:transform doc:name="Process Asset Allocation">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var employeeId = payload.employeeId
+var requestedAssets = payload.assets
+var standardKit = ["laptop", "id-card", "bag"]
+var availableAssets = requestedAssets default standardKit
+---
+{
+    employeeId: employeeId,
+    allocatedAssets: availableAssets map {
+        assetType: $,
+        assetId: "ASSET-" ++ upper($) ++ "-" ++ (now() as String {format: "yyyyMMddHHmmss"}),
+        status: "allocated",
+        assignedAt: now()
+    },
+    totalAssetsAllocated: sizeOf(availableAssets),
+    allocationStatus: "success"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        
+        <set-payload value='#[{
+            "status": "success",
+            "message": "Assets successfully allocated to employee " ++ payload.employeeId,
+            "allocation": payload
+        }]' doc:name="Set Success Response"/>
+        
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="Error Handler">
+                <logger level="ERROR" message="Error allocating assets: #[error.description]" doc:name="Log Error"/>
+                <set-payload value='#[{
+                    "status": "error",
+                    "message": error.description
+                }]' doc:name="Set Error Response"/>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    
+    <!-- MCP Tool: Get Asset Inventory -->
+    <flow name="get-asset-inventory-mcp">
+        <http:listener config-ref="http-config" path="/mcp/tools/get-asset-inventory" allowedMethods="POST" doc:name="HTTP Listener"/>
+        <logger level="INFO" message="Getting asset inventory for: #[payload.assetType default 'all']" doc:name="Log Request"/>
+        
+        <!-- Simulate inventory lookup -->
+        <ee:transform doc:name="Get Inventory Status">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var requestedType = payload.assetType default "all"
+var inventory = {
+    "laptop": {
+        "available": 25,
+        "allocated": 15,
+        "total": 40,
+        "models": ["Dell Latitude 5520", "MacBook Pro 13", "Lenovo ThinkPad T14"]
+    },
+    "id-card": {
+        "available": 50,
+        "allocated": 30,
+        "total": 80,
+        "types": ["Standard Employee", "Contractor", "Temporary"]
+    },
+    "bag": {
+        "available": 35,
+        "allocated": 20,
+        "total": 55,
+        "types": ["Backpack", "Messenger", "Tote"]
+    }
+}
+---
+if (requestedType == "all") 
+    {
+        "inventoryType": "all",
+        "inventory": inventory,
+        "summary": {
+            "totalAssets": inventory.laptop.total + inventory."id-card".total + inventory.bag.total,
+            "totalAvailable": inventory.laptop.available + inventory."id-card".available + inventory.bag.available,
+            "totalAllocated": inventory.laptop.allocated + inventory."id-card".allocated + inventory.bag.allocated
+        }
+    }
+else 
+    {
+        "inventoryType": requestedType,
+        "inventory": inventory[requestedType],
+        "found": inventory[requestedType] != null
+    }]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        
+        <set-payload value='#[{
+            "status": "success",
+            "data": payload
+        }]' doc:name="Set Success Response"/>
+        
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="Error Handler">
+                <logger level="ERROR" message="Error getting inventory: #[error.description]" doc:name="Log Error"/>
+                <set-payload value='#[{
+                    "status": "error",
+                    "message": error.description
+                }]' doc:name="Set Error Response"/>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    
+</mule>

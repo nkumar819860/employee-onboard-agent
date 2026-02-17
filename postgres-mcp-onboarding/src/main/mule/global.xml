@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:mcp="http://www.mulesoft.org/schema/mule/mcp" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mcp http://www.mulesoft.org/schema/mule/mcp/current/mule-mcp.xsd">
     
     <configuration-properties file="config.properties" doc:name="Configuration properties"/>
     
-    <http:listener-config name="http-config" doc:name="HTTP Config">
+    <http:listener-config doc:name="HTTP Config" name="http-config">
         <http:listener-connection host="${http.host}" port="${http.port}">
-            <http:protocol-support />
+            <http:protocol-support/>
         </http:listener-connection>
     </http:listener-config>
     
-    <db:config name="postgres-config" doc:name="PostgreSQL Config">
-        <db:generic-connection url="${db.url}" driverClassName="${db.driverClassName}" />
+    <db:config doc:name="PostgreSQL Config" name="postgres-config">
+        <db:generic-connection driverClassName="${db.driverClassName}" url="${db.url}" user="${db.username}" password="${db.password}"/>
     </db:config>
+    
+    <mcp:server-config name="Mcp_Config" doc:name="Mcp Config" serverName="${mcp.serverName}" serverVersion="${mcp.serverVersion}">
+        <mcp:streamable-http-server-connection>
+            <mcp:session-handling />
+        </mcp:streamable-http-server-connection>
+    </mcp:server-config>
     
 </mule>
