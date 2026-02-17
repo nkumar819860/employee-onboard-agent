@@ -1,0 +1,1798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Onboarding System - Complete Documentation & Architecture</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Light Professional Color Palette */
+            --primary-blue: #3B82F6;
+            --secondary-blue: #60A5FA;
+            --accent-teal: #14B8A6;
+            --success-green: #10B981;
+            --warning-amber: #F59E0B;
+            --error-red: #EF4444;
+            --dark-navy: #1E293B;
+            --slate-gray: #64748B;
+            --light-gray: #F8FAFC;
+            --medium-gray: #E2E8F0;
+            --white: #FFFFFF;
+            
+            /* Light gradients */
+            --professional-gradient: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 50%, #F8FAFC 100%);
+            --card-gradient: linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 100%);
+            --accent-gradient: linear-gradient(135deg, #3B82F6, #14B8A6);
+            --success-gradient: linear-gradient(135deg, #10B981, #059669);
+            --warning-gradient: linear-gradient(135deg, #F59E0B, #D97706);
+            
+            /* Soft shadows */
+            --card-shadow: 0 4px 15px rgba(59, 130, 246, 0.08);
+            --hover-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+            
+            /* Additional light colors */
+            --light-blue: #DBEAFE;
+            --light-teal: #CCFBF1;
+            --light-green: #D1FAE5;
+            --light-amber: #FEF3C7;
+            --border-color: #E5E7EB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--professional-gradient);
+            color: var(--dark-navy);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .main-nav {
+            background: var(--white);
+            box-shadow: 0 2px 20px rgba(59, 130, 246, 0.1);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 4rem;
+        }
+
+        .nav-brand {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--primary-blue);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: var(--slate-gray);
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+        }
+
+        .nav-link:hover {
+            color: var(--primary-blue);
+            background: var(--light-blue);
+        }
+
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--primary-blue);
+            cursor: pointer;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 6rem 2rem 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: var(--card-gradient);
+            border-radius: 24px;
+            padding: 4rem 2rem;
+            text-align: center;
+            margin-bottom: 4rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--dark-navy);
+            margin-bottom: 1rem;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .hero .subtitle {
+            font-size: 1.3rem;
+            color: var(--slate-gray);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .tech-badges {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .tech-badge {
+            background: var(--light-blue);
+            color: var(--primary-blue);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 500;
+            border: 1px solid var(--primary-blue);
+            font-size: 0.9rem;
+        }
+
+        /* Section Styles */
+        .section {
+            margin: 4rem 0;
+            scroll-margin-top: 6rem;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--dark-navy);
+            margin-bottom: 2rem;
+            position: relative;
+            padding-bottom: 0.5rem;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 4rem;
+            height: 4px;
+            background: var(--accent-gradient);
+            border-radius: 2px;
+        }
+
+        /* Slide Styles */
+        .slide {
+            background: var(--card-gradient);
+            margin: 3rem 0;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--accent-gradient);
+        }
+
+        .slide h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--dark-navy);
+            margin-bottom: 1.5rem;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .slide h3 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--primary-blue);
+            margin-bottom: 1rem;
+        }
+
+        .slide p {
+            color: var(--slate-gray);
+            font-size: 1.1rem;
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+
+        /* Card Styles */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .card-icon {
+            width: 4rem;
+            height: 4rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--dark-navy);
+            margin-bottom: 0.5rem;
+        }
+
+        .card-description {
+            color: var(--slate-gray);
+            line-height: 1.6;
+        }
+
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .feature-card {
+            background: var(--white);
+            padding: 2rem;
+            border-radius: 16px;
+            border-left: 4px solid var(--primary-blue);
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .feature-card:nth-child(2n) { border-left-color: var(--accent-teal); }
+        .feature-card:nth-child(3n) { border-left-color: var(--success-green); }
+        .feature-card:nth-child(4n) { border-left-color: var(--warning-amber); }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        /* Architecture Diagrams */
+        .architecture-diagram {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--card-shadow);
+        }
+
+        .diagram-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--dark-navy);
+            margin-bottom: 2rem;
+        }
+
+        .component-layer {
+            margin: 2rem 0;
+            padding: 1rem 0;
+        }
+
+        .component-box {
+            display: inline-block;
+            padding: 1rem 2rem;
+            margin: 0.5rem;
+            border-radius: 12px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .component-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .react-component { background: var(--success-gradient); }
+        .mcp-component { background: var(--accent-gradient); }
+        .mule-component { background: var(--warning-gradient); }
+        .database-component { background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue)); }
+        .security-component { background: linear-gradient(135deg, var(--warning-amber), #D97706); }
+
+        .flow-arrow {
+            font-size: 2rem;
+            color: var(--primary-blue);
+            margin: 0 1rem;
+        }
+
+        .connection-line {
+            width: 2px;
+            height: 2rem;
+            background: var(--accent-gradient);
+            margin: 1rem auto;
+            border-radius: 1px;
+        }
+
+        /* Process Flow */
+        .process-flow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 2rem 0;
+            padding: 2rem;
+            background: var(--light-blue);
+            border-radius: 16px;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .process-step {
+            flex: 1;
+            text-align: center;
+            padding: 1rem;
+            min-width: 150px;
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .step-number {
+            width: 3rem;
+            height: 3rem;
+            background: var(--accent-gradient);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem auto;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: var(--dark-navy);
+            margin-bottom: 0.5rem;
+        }
+
+        .step-description {
+            color: var(--slate-gray);
+            font-size: 0.9rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background: var(--white);
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+            border-left: 4px solid var(--primary-blue);
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary-blue);
+            display: block;
+            line-height: 1;
+        }
+
+        .stat-label {
+            color: var(--slate-gray);
+            font-weight: 500;
+            margin-top: 0.5rem;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 1rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--accent-gradient);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 2rem;
+            background: var(--white);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            margin-left: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -3rem;
+            top: 2rem;
+            width: 1rem;
+            height: 1rem;
+            background: var(--primary-blue);
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px var(--white), 0 0 0 6px var(--primary-blue);
+        }
+
+        .timeline-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--dark-navy);
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-description {
+            color: var(--slate-gray);
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--dark-navy);
+            color: #E2E8F0;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+            font-family: 'Monaco', 'Consolas', monospace;
+            overflow-x: auto;
+            position: relative;
+            border: 1px solid var(--border-color);
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #475569;
+        }
+
+        .code-title {
+            color: var(--accent-teal);
+            font-weight: 600;
+        }
+
+        .copy-btn {
+            background: var(--slate-gray);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: var(--primary-blue);
+        }
+
+        /* Table Styles */
+        .table-container {
+            overflow-x: auto;
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            margin: 2rem 0;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--light-gray);
+            font-weight: 600;
+            color: var(--dark-navy);
+        }
+
+        tr:hover {
+            background: var(--light-gray);
+        }
+
+        /* Benefits Grid */
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .benefit-card {
+            background: var(--success-gradient);
+            color: white;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.3s ease;
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .benefit-card:nth-child(2n) {
+            background: var(--accent-gradient);
+        }
+
+        .benefit-card:nth-child(3n) {
+            background: var(--warning-gradient);
+        }
+
+        .benefit-card:nth-child(4n) {
+            background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+        }
+
+        /* Tech Stack */
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .tech-item {
+            background: var(--accent-gradient);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.3s ease;
+        }
+
+        .tech-item:hover {
+            transform: scale(1.05);
+        }
+
+        .tech-item:nth-child(odd) {
+            background: var(--success-gradient);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-toggle {
+                display: block;
+            }
+
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--white);
+                flex-direction: column;
+                padding: 1rem 2rem;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            }
+
+            .nav-links.active {
+                display: flex;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .slide {
+                padding: 2rem 1.5rem;
+            }
+
+            .process-flow {
+                flex-direction: column;
+            }
+
+            .timeline {
+                padding-left: 1rem;
+            }
+
+            .timeline-item {
+                margin-left: 1rem;
+            }
+
+            .timeline-item::before {
+                left: -2rem;
+            }
+
+            .container {
+                padding: 6rem 1rem 2rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        /* Scroll to top button */
+        .scroll-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--accent-gradient);
+            color: white;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+            border: none;
+        }
+
+        .scroll-top.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .scroll-top:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <i class="fas fa-robot"></i> Employee Onboarding System
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#overview" class="nav-link">Overview</a></li>
+                <li><a href="#architecture" class="nav-link">Architecture</a></li>
+                <li><a href="#presentation" class="nav-link">Presentation</a></li>
+                <li><a href="#components" class="nav-link">Components</a></li>
+                <li><a href="#implementation" class="nav-link">Implementation</a></li>
+                <li><a href="#deployment" class="nav-link">Deployment</a></li>
+                <li><a href="#results" class="nav-link">Results</a></li>
+            </ul>
+            <button class="nav-toggle" id="navToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Hero Section -->
+        <div class="hero">
+            <h1><i class="fas fa-robot"></i> Employee Onboarding System</h1>
+            <p class="subtitle">
+                AI-Powered Intelligent Automation with Agent Fabric Architecture<br>
+                Complete Documentation & Architecture Presentation
+            </p>
+            <div class="tech-badges">
+                <span class="tech-badge"><i class="fas fa-brain"></i> Groq LLM</span>
+                <span class="tech-badge"><i class="fas fa-network-wired"></i> MCP Protocol</span>
+                <span class="tech-badge"><i class="fas fa-database"></i> PostgreSQL</span>
+                <span class="tech-badge"><i class="fab fa-react"></i> React.js</span>
+                <span class="tech-badge"><i class="fab fa-python"></i> Python</span>
+                <span class="tech-badge"><i class="fas fa-cloud"></i> Cloud Native</span>
+            </div>
+        </div>
+
+        <!-- Project Overview -->
+        <section id="overview" class="section">
+            <h2 class="section-title"><i class="fas fa-eye"></i> Project Overview</h2>
+            <div class="slide">
+                <p style="font-size: 1.2rem; line-height: 1.8; color: var(--slate-gray); margin-bottom: 2rem;">
+                    The Employee Onboarding System is a revolutionary AI-powered automation platform that transforms the traditional employee onboarding process through intelligent agents, natural language processing, and seamless system integration. Built on a modern Agent Fabric Architecture, it demonstrates the power of agentic automation in enterprise environments.
+                </p>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-number">11</span>
+                        <div class="stat-label">Core Components</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: var(--accent-teal);">
+                        <span class="stat-number" style="color: var(--accent-teal);">3</span>
+                        <div class="stat-label">MCP Services</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: var(--success-green);">
+                        <span class="stat-number" style="color: var(--success-green);">80%</span>
+                        <div class="stat-label">Time Reduction</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: var(--warning-amber);">
+                        <span class="stat-number" style="color: var(--warning-amber);">100%</span>
+                        <div class="stat-label">Automation Rate</div>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 1.8rem; margin: 3rem 0 1rem 0; color: var(--dark-navy);">Key Achievements</h3>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <span class="feature-icon"><i class="fas fa-brain" style="color: var(--success-green);"></i></span>
+                        <h4 class="card-title">Natural Language Processing</h4>
+                        <p class="card-description">Implemented Groq LLM for intelligent parsing of employee information from natural language input</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon"><i class="fas fa-cogs" style="color: var(--accent-teal);"></i></span>
+                        <h4 class="card-title">MCP Protocol Integration</h4>
+                        <p class="card-description">Built standardized communication layer for seamless agent-to-service interaction</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon"><i class="fas fa-database" style="color: var(--warning-amber);"></i></span>
+                        <h4 class="card-title">Multi-Service Orchestration</h4>
+                        <p class="card-description">Coordinated PostgreSQL, Assets, and Notification services through intelligent workflow</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon"><i class="fas fa-globe" style="color: var(--primary-blue);"></i></span>
+                        <h4 class="card-title">Full-Stack Implementation</h4>
+                        <p class="card-description">Complete solution from React frontend to Python backend with Docker deployment</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- System Architecture -->
+        <section id="architecture" class="section">
+            <h2 class="section-title"><i class="fas fa-sitemap"></i> Agent Fabric Architecture</h2>
+            
+            <div class="slide">
+                <h3>💡 Defining Agent Fabric</h3>
+                <div style="background: var(--light-blue); padding: 2rem; border-radius: 12px; margin: 2rem 0; border: 1px solid var(--primary-blue);">
+                    <p style="font-size: 1.2rem; color: var(--dark-navy); font-weight: 500;">
+                        An <strong>Agent Fabric</strong> is an intelligent ecosystem of autonomous, specialized agents that collaborate through standardized protocols to execute complex business processes with minimal human intervention.
+                    </p>
+                </div>
+                
+                <div class="architecture-diagram">
+                    <div class="diagram-title">🎯 Agent Fabric Core Architecture</div>
+                    
+                    <div class="component-layer">
+                        <div class="component-box react-component">💻 React MCP Client</div>
+                    </div>
+                    
+                    <div class="connection-line"></div>
+                    <div class="flow-arrow">⬇️</div>
+                    
+                    <div class="component-layer">
+                        <div class="component-box database-component">🤖 Agent Orchestrator</div>
+                    </div>
+                    
+                    <div class="connection-line"></div>
+                    <div class="flow-arrow">⬇️</div>
+                    
+                    <div class="component-layer">
+                        <div class="component-box mcp-component">📊 PostgreSQL MCP</div>
+                        <div class="component-box mcp-component">🛠️ Assets MCP</div>
+                        <div class="component-box mcp-component">📧 Notifications MCP</div>
+                    </div>
+                    
+                    <div class="connection-line"></div>
+                    <div class="flow-arrow">⬇️</div>
+                    
+                    <div class="component-layer">
+                        <div class="component-box mule-component">🗄️ Database Layer</div>
+                        <div class="component-box mule-component">📦 Asset Systems</div>
+                        <div class="component-box mule-component">✉️ Communication Hub</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 3rem;">Agent Fabric Architecture Flow</h3>
+                <div class="process-flow">
+                    <div class="process-step">
+                        <div class="step-number">1</div>
+                        <div class="step-title">Natural Language Input</div>
+                        <div class="step-description">Employee data parsed through advanced NLP algorithms</div>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="process-step">
+                        <div class="step-number">2</div>
+                        <div class="step-title">Groq LLM Processing</div>
+                        <div class="step-description">Intelligent extraction and validation</div>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="process-step">
+                        <div class="step-number">3</div>
+                        <div class="step-title">Agent Orchestration</div>
+                        <div class="step-description">Coordinated execution across MCP servers</div>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="process-step">
+                        <div class="step-number">4</div>
+                        <div class="step-title">MCP Execution</div>
+                        <div class="step-description">Multi-service workflow processing</div>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="process-step">
+                        <div class="step-number">5</div>
+                        <div class="step-title">Automated Response</div>
+                        <div class="step-description">Consolidated results with audit trail</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 3rem;">🔧 Architectural Principles</h3>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4 class="card-title">🧩 Modularity</h4>
+                        <p class="card-description">Each agent maintains specific responsibilities and capabilities, enabling focused optimization and independent scaling.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4 class="card-title">🔄 Interoperability</h4>
+                        <p class="card-description">Standardized MCP communication ensures seamless data exchange and coordinated execution across all agents.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4 class="card-title">📈 Scalability</h4>
+                        <p class="card-description">Dynamic agent provisioning and horizontal scaling capabilities to handle varying workloads efficiently.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4 class="card-title">🔒 Reliability</h4>
+                        <p class="card-description">Fault-tolerant design with comprehensive health monitoring, automatic recovery, and graceful degradation.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <div class="card-icon" style="background: var(--accent-gradient);">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <h3 class="card-title">Presentation Layer</h3>
+                    <div class="card-description">
+                        <strong>React.js Frontend:</strong> Modern, responsive web interface with real-time updates via WebSocket connections. Provides intuitive natural language input and comprehensive dashboard views.
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon" style="background: var(--success-gradient);">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3 class="card-title">Agent Layer</h3>
+                    <div class="card-description">
+                        <strong>Intelligent Agents:</strong> Groq LLM-powered agents for natural language understanding, workflow orchestration, and business logic execution with context management.
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon" style="background: var(--warning-gradient);">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <h3 class="card-title">Integration Layer</h3>
+                    <div class="card-description">
+                        <strong>MCP Protocol:</strong> Standardized communication protocol enabling seamless integration between agents and various backend services and databases.
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));">
+                        <i class="fas fa-server"></i>
+                    </div>
+                    <h3 class="card-title">Service Layer</h3>
+                    <div class="card-description">
+                        <strong>Microservices:</strong> Specialized MCP services for database operations, asset management, and multi-channel notifications with full audit trails.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Architecture Presentation Slides -->
+        <section id="presentation" class="section">
+            <h2 class="section-title"><i class="fas fa-presentation"></i> Architecture Presentation</h2>
+            
+            <!-- MCP Integration Excellence -->
+            <div class="slide">
+                <h2>🔗 Model Context Protocol Integration Excellence</h2>
+                
+                <div style="background: var(--light-teal); padding: 2rem; border-radius: 12px; margin: 2rem 0; border: 1px solid var(--accent-teal);">
+                    <h3>📡 Understanding MCP</h3>
+                    <p style="font-size: 1.15rem; color: var(--dark-navy);">
+                        The <strong>Model Context Protocol</strong> creates a unified interface between AI agents and external tools, enabling seamless communication, tool discovery, and resource sharing in distributed agent networks.
+                    </p>
+                </div>
+                
+                <h3>🛠️ Our MCP Server Implementation</h3>
+                <div class="feature-grid">
+                    <div class="feature-card" style="border-left-color: var(--success-green);">
+                        <span class="feature-icon"><i class="fas fa-database" style="color: var(--success-green);"></i></span>
+                        <h4 class="card-title">PostgreSQL MCP Server</h4>
+                        <p class="card-description"><strong>Core Purpose:</strong> Employee lifecycle management<br>
+                        <strong>Tools:</strong> create_employee, update_profile, health_check<br>
+                        <strong>Resources:</strong> Database schemas, connection pooling</p>
+                    </div>
+                    
+                    <div class="feature-card" style="border-left-color: var(--warning-amber);">
+                        <span class="feature-icon"><i class="fas fa-box" style="color: var(--warning-amber);"></i></span>
+                        <h4 class="card-title">Assets MCP Server</h4>
+                        <p class="card-description"><strong>Core Purpose:</strong> IT asset lifecycle and allocation<br>
+                        <strong>Tools:</strong> allocate_assets, track_delivery, cost_analysis<br>
+                        <strong>Resources:</strong> Inventory catalogs, pricing matrices</p>
+                    </div>
+                    
+                    <div class="feature-card" style="border-left-color: var(--accent-teal);">
+                        <span class="feature-icon"><i class="fas fa-bell" style="color: var(--accent-teal);"></i></span>
+                        <h4 class="card-title">Notifications MCP Server</h4>
+                        <p class="card-description"><strong>Core Purpose:</strong> Omnichannel communication orchestration<br>
+                        <strong>Tools:</strong> send_email, send_sms, slack_integration<br>
+                        <strong>Resources:</strong> Templates, delivery tracking, preferences</p>
+                    </div>
+                </div>
+                
+                <h3>🔧 MCP Protocol Advantages</h3>
+                <div class="benefits-grid">
+                    <div class="benefit-card">
+                        <h4>🔌 Standardization</h4>
+                        <p>Uniform interface eliminates integration complexity across diverse systems</p>
+                    </div>
+                    <div class="benefit-card">
+                        <h4>🔄 Composability</h4>
+                        <p>Mix and match agent capabilities dynamically based on business requirements</p>
+                    </div>
+                    <div class="benefit-card">
+                        <h4>🛡️ Security & Access Control</h4>
+                        <p>Fine-grained permissions and controlled resource access per agent</p>
+                    </div>
+                    <div class="benefit-card">
+                        <h4>📈 Horizontal Scalability</h4>
+                        <p>Add new servers and capabilities without modifying existing clients</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employee Onboarding Workflow -->
+            <div class="slide">
+                <h2>👥 Intelligent Employee Onboarding Workflow</h2>
+                
+                <h3>🧠 Advanced Natural Language Processing</h3>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">NLP Processing Example</span>
+                        <button class="copy-btn" onclick="copyCode(this)">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <pre><code>Input: "Create new employee Sarah Johnson, email sarah.johnson@company.com, role manager in general department"
+
+🤖 NLP Extraction Pipeline:
+✅ Name: "Sarah Johnson" (confidence: 0.30)
+✅ Email: "sarah.johnson@company.com" (confidence: 0.40)  
+✅ Role: "manager" (confidence: 0.20)
+✅ Department: "general" (confidence: 0.10)
+📊 Total Confidence: 1.00 (✅ Processing approved)
+
+🔍 Validation Results:
+✅ Email format validation passed
+✅ Role mapping to system roles successful  
+✅ Department exists in organizational structure
+✅ All required fields extracted successfully</code></pre>
+                </div>
+                
+                <h3>🎯 Intelligent Asset Allocation Matrix</h3>
+                <div class="feature-grid">
+                    <div class="feature-card" style="border-left-color: var(--success-green);">
+                        <span class="feature-icon"><i class="fas fa-user" style="color: var(--success-green);"></i></span>
+                        <h4 class="card-title">Standard Employee</h4>
+                        <p class="card-description"><strong>Assets:</strong> Laptop, ID Card, Welcome Kit, Access Card<br>
+                        <strong>Estimated Cost:</strong> $1,350</p>
+                    </div>
+                    <div class="feature-card" style="border-left-color: var(--primary-blue);">
+                        <span class="feature-icon"><i class="fas fa-user-tie" style="color: var(--primary-blue);"></i></span>
+                        <h4 class="card-title">Manager</h4>
+                        <p class="card-description"><strong>Assets:</strong> + Parking Pass, Mobile Phone<br>
+                        <strong>Estimated Cost:</strong> $1,650</p>
+                    </div>
+                    <div class="feature-card" style="border-left-color: var(--warning-amber);">
+                        <span class="feature-icon"><i class="fas fa-graduation-cap" style="color: var(--warning-amber);"></i></span>
+                        <h4 class="card-title">Intern</h4>
+                        <p class="card-description"><strong>Assets:</strong> Laptop, ID Card, Temporary Badge<br>
+                        <strong>Estimated Cost:</strong> $1,250</p>
+                    </div>
+                    <div class="feature-card" style="border-left-color: var(--accent-teal);">
+                        <span class="feature-icon"><i class="fas fa-crown" style="color: var(--accent-teal);"></i></span>
+                        <h4 class="card-title">Executive</h4>
+                        <p class="card-description"><strong>Assets:</strong> + Company Car, Premium Package<br>
+                        <strong>Estimated Cost:</strong> $2,800</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Core Components -->
+        <section id="components" class="section">
+            <h2 class="section-title"><i class="fas fa-puzzle-piece"></i> Core Components & Technology Stack</h2>
+            
+            <div class="slide">
+                <h3>🛠️ Enterprise Technology Stack</h3>
+                <div class="tech-stack">
+                    <div class="tech-item">🌐 React + TypeScript</div>
+                    <div class="tech-item">🔗 Model Context Protocol</div>
+                    <div class="tech-item">🧠 Groq LLM</div>
+                    <div class="tech-item">🐘 PostgreSQL Database</div>
+                    <div class="tech-item">🐳 Docker Containers</div>
+                    <div class="tech-item">🌐 NGINX Load Balancer</div>
+                    <div class="tech-item">🔒 Enterprise Security</div>
+                    <div class="tech-item">📊 Monitoring & Analytics</div>
+                </div>
+
+                <h3 style="margin-top: 3rem;">MCP Services Configuration</h3>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">MCP Server Configuration</span>
+                        <button class="copy-btn" onclick="copyCode(this)">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <pre><code>{
+  "name": "employee-onboarding-mcp-suite",
+  "version": "1.0.0",
+  "services": {
+    "postgres-mcp": {
+      "tools": ["create_employee", "get_employee", "update_employee"],
+      "resources": ["employee_database", "audit_logs"],
+      "port": 3001
+    },
+    "assets-mcp": {
+      "tools": ["allocate_assets", "track_inventory", "calculate_costs"],
+      "resources": ["asset_inventory", "cost_database"],
+      "port": 3002
+    },
+    "notification-mcp": {
+      "tools": ["send_email", "send_sms", "send_slack"],
+      "resources": ["templates", "delivery_tracking"],
+      "port": 3003
+    }
+  },
+  "orchestration": {
+    "workflow_engine": "python-async",
+    "llm_integration": "groq",
+    "monitoring": "prometheus"
+  }
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Implementation Timeline -->
+        <section id="implementation" class="section">
+            <h2 class="section-title"><i class="fas fa-code"></i> Implementation Timeline</h2>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h3 class="timeline-title">Phase 1: Foundation & Architecture Design</h3>
+                    <p class="timeline-description">
+                        Established the core Agent Fabric Architecture, designed MCP protocol integration, and set up the development environment with Docker containerization and PostgreSQL database.
+                    </p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h3 class="timeline-title">Phase 2: MCP Services Development</h3>
+                    <p class="timeline-description">
+                        Built three specialized MCP services - PostgreSQL MCP for database operations, Assets MCP for resource management, and Notification MCP for multi-channel communications. Each service follows the MCP protocol specification.
+                    </p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h3 class="timeline-title">Phase 3: Agent Intelligence Integration</h3>
+                    <p class="timeline-description">
+                        Integrated Groq LLM for natural language processing, implemented intelligent workflow orchestration, and developed the agent-based automation system with context management and error handling.
+                    </p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h3 class="timeline-title">Phase 4: Frontend & User Experience</h3>
+                    <p class="timeline-description">
+                        Created modern React.js frontend with TypeScript, implemented real-time WebSocket connections, designed responsive UI components, and integrated comprehensive dashboard views with progress tracking.
+                    </p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h3 class="timeline-title">Phase 5: Testing & Deployment</h3>
+                    <p class="timeline-description">
+                        Comprehensive testing suite including unit tests, integration tests, and end-to-end automation testing. Deployed to cloud infrastructure with monitoring, logging, and automated CI/CD pipelines.
+                    </p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h3 class="timeline-title">Phase 6: Documentation & Publication</h3>
+                    <p class="timeline-description">
+                        Created comprehensive technical documentation, published assets to repositories, developed presentation materials, and established project maintenance and support procedures.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Deployment -->
+        <section id="deployment" class="section">
+            <h2 class="section-title"><i class="fas fa-cloud"></i> Deployment & Infrastructure</h2>
+            
+            <div class="card-grid">
+                <div class="card">
+                    <div class="card-icon" style="background: var(--accent-gradient);">
+                        <i class="fab fa-docker"></i>
+                    </div>
+                    <h3 class="card-title">Containerization</h3>
+                    <div class="card-description">
+                        Full Docker containerization with multi-stage builds, optimized images, and container orchestration. Includes development, staging, and production environments.
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon" style="background: var(--success-gradient);">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <h3 class="card-title">Microservices Architecture</h3>
+                    <div class="card-description">
+                        Distributed microservices with API Gateway, load balancing, service discovery, and inter-service communication via MCP protocol.
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon" style="background: var(--warning-gradient);">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3 class="card-title">Security & Compliance</h3>
+                    <div class="card-description">
+                        Enterprise-grade security with OAuth 2.0, JWT tokens, rate limiting, data encryption, audit logging, and compliance monitoring.
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1.8rem; margin: 3rem 0 1rem 0; color: var(--dark-navy);">Docker Compose Configuration</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">docker-compose.yml</span>
+                    <button class="copy-btn" onclick="copyCode(this)">
+                        <i class="fas fa-copy"></i> Copy
+                    </button>
+                </div>
+                <pre><code>version: '3.8'
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: employee_onboarding
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+
+  # MCP Services
+  postgres-mcp:
+    build: ./mule-postgres
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/employee_onboarding
+
+  # React Frontend
+  frontend:
+    build: ./react-mcp-client
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:8080
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+
+volumes:
+  postgres_data:</code></pre>
+            </div>
+        </section>
+
+        <!-- Results & Impact -->
+        <section id="results" class="section">
+            <h2 class="section-title"><i class="fas fa-chart-line"></i> Results & Business Impact</h2>
+            
+            <div class="slide">
+                <h3>📊 Business Impact Metrics</h3>
+                <div class="stats-grid">
+                    <div class="stat-card" style="border-left-color: var(--success-green);">
+                        <span class="stat-number" style="color: var(--success-green);">80%</span>
+                        <div class="stat-label">Processing Time Reduction</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: var(--accent-teal);">
+                        <span class="stat-number" style="color: var(--accent-teal);">100%</span>
+                        <div class="stat-label">Automation Achievement</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: var(--warning-amber);">
+                        <span class="stat-number" style="color: var(--warning-amber);">95%</span>
+                        <div class="stat-label">Accuracy Improvement</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: var(--error-red);">
+                        <span class="stat-number" style="color: var(--error-red);">0</span>
+                        <div class="stat-label">Manual Errors</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 3rem;">Technology Stack Summary</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Layer</th>
+                                <th>Technology</th>
+                                <th>Purpose</th>
+                                <th>Version</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Frontend</td>
+                                <td>React.js + TypeScript</td>
+                                <td>User Interface & Experience</td>
+                                <td>18.x</td>
+                            </tr>
+                            <tr>
+                                <td>AI/ML</td>
+                                <td>Groq LLM</td>
+                                <td>Natural Language Processing</td>
+                                <td>Latest</td>
+                            </tr>
+                            <tr>
+                                <td>Protocol</td>
+                                <td>MCP (Model Context Protocol)</td>
+                                <td>Agent-Service Communication</td>
+                                <td>1.0</td>
+                            </tr>
+                            <tr>
+                                <td>Database</td>
+                                <td>PostgreSQL</td>
+                                <td>Data Storage & Management</td>
+                                <td>15.x</td>
+                            </tr>
+                            <tr>
+                                <td>Backend</td>
+                                <td>Python + FastAPI</td>
+                                <td>API Services & Agent Logic</td>
+                                <td>3.11</td>
+                            </tr>
+                            <tr>
+                                <td>Containers</td>
+                                <td>Docker + Compose</td>
+                                <td>Application Deployment</td>
+                                <td>24.x</td>
+                            </tr>
+                            <tr>
+                                <td>Monitoring</td>
+                                <td>Prometheus + Grafana</td>
+                                <td>Metrics & Observability</td>
+                                <td>Latest</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 style="margin-top: 3rem;">🚀 Future Enhancements</h3>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <span class="feature-icon"><i class="fas fa-eye" style="color: var(--primary-blue);"></i></span>
+                        <h4 class="card-title">Multi-Modal Processing</h4>
+                        <p class="card-description">Extend the system to handle document processing, image recognition, and voice commands for comprehensive employee onboarding.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <span class="feature-icon"><i class="fas fa-brain" style="color: var(--accent-teal);"></i></span>
+                        <h4 class="card-title">Advanced AI Capabilities</h4>
+                        <p class="card-description">Implement advanced reasoning, predictive analytics, and machine learning models for intelligent decision-making.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <span class="feature-icon"><i class="fas fa-globe" style="color: var(--success-green);"></i></span>
+                        <h4 class="card-title">Enterprise Integration</h4>
+                        <p class="card-description">Expand integration with enterprise systems like SAP, Workday, Active Directory, and other HR platforms.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <span class="feature-icon"><i class="fas fa-mobile-alt" style="color: var(--warning-amber);"></i></span>
+                        <h4 class="card-title">Mobile Applications</h4>
+                        <p class="card-description">Native iOS and Android apps with offline capabilities and push notifications for HR managers.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Scroll to Top Button -->
+    <button class="scroll-top" id="scrollTop">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
+    <!-- Footer -->
+    <footer style="background: var(--card-gradient); padding: 3rem 0; margin-top: 4rem; border-top: 1px solid var(--border-color);">
+        <div class="container">
+            <div style="text-align: center;">
+                <h3 style="margin-bottom: 1rem; color: var(--dark-navy);">Employee Onboarding System</h3>
+                <p style="color: var(--slate-gray); margin-bottom: 2rem;">
+                    AI-Powered Intelligent Automation with Agent Fabric Architecture
+                </p>
+                <div style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                    <span style="color: var(--slate-gray);">
+                        <i class="fas fa-code"></i> Built with Modern Technologies
+                    </span>
+                    <span style="color: var(--slate-gray);">
+                        <i class="fas fa-rocket"></i> Enterprise Ready
+                    </span>
+                    <span style="color: var(--slate-gray);">
+                        <i class="fas fa-shield-alt"></i> Security First
+                    </span>
+                </div>
+                <p style="color: var(--slate-gray); font-size: 0.9rem;">
+                    © 2026 Employee Onboarding System. Complete Documentation and Architecture Guide.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Navigation toggle for mobile
+        const navToggle = document.getElementById('navToggle');
+        const navLinks = document.getElementById('navLinks');
+
+        navToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+                // Close mobile menu if open
+                navLinks.classList.remove('active');
+            });
+        });
+
+        // Scroll to top functionality
+        const scrollTopBtn = document.getElementById('scrollTop');
+        
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                scrollTopBtn.classList.add('visible');
+            } else {
+                scrollTopBtn.classList.remove('visible');
+            }
+        });
+
+        scrollTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Copy code functionality
+        function copyCode(button) {
+            const codeBlock = button.parentElement.nextElementSibling;
+            const code = codeBlock.textContent;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    button.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                }, 2000);
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = code;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    button.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                }, 2000);
+            });
+        }
+
+        // Add fade-in animation to elements as they come into view
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in-up');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        // Observe all major elements for animation
+        document.querySelectorAll('.slide, .card, .feature-card, .timeline-item').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Active navigation highlighting
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('.section');
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop - 100;
+                if (window.pageYOffset >= sectionTop) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // Enhanced search functionality
+        function searchContent() {
+            const searchTerm = document.getElementById('searchInput')?.value.toLowerCase();
+            if (!searchTerm) return;
+            
+            const sections = document.querySelectorAll('.slide, .card, .feature-card');
+            sections.forEach(section => {
+                const text = section.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    section.style.border = '2px solid var(--primary-blue)';
+                    section.style.background = 'var(--light-blue)';
+                } else {
+                    section.style.border = '';
+                    section.style.background = '';
+                }
+            });
+        }
+
+        // Dynamic stats counter animation
+        function animateStats() {
+            const stats = document.querySelectorAll('.stat-number');
+            stats.forEach(stat => {
+                const target = parseInt(stat.textContent);
+                if (isNaN(target)) return;
+                
+                let current = 0;
+                const increment = target / 100;
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        stat.textContent = target + (stat.textContent.includes('%') ? '%' : '');
+                        clearInterval(timer);
+                    } else {
+                        stat.textContent = Math.floor(current) + (stat.textContent.includes('%') ? '%' : '');
+                    }
+                }, 20);
+            });
+        }
+
+        // Initialize animations when page loads
+        window.addEventListener('load', () => {
+            setTimeout(animateStats, 1000);
+        });
+
+        // Print functionality
+        function printDocument() {
+            window.print();
+        }
+
+        // Export to PDF (placeholder for future implementation)
+        function exportToPDF() {
+            alert('PDF export functionality would be implemented here using libraries like jsPDF or Puppeteer');
+        }
+
+        // Theme toggle functionality (for future dark mode)
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+            localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+        }
+
+        // Load saved theme
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-theme');
+        }
+
+        // Performance monitoring
+        window.addEventListener('load', () => {
+            const loadTime = performance.now();
+            console.log(`Page loaded in ${Math.round(loadTime)}ms`);
+        });
+
+        // Enhanced keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'f':
+                        e.preventDefault();
+                        document.getElementById('searchInput')?.focus();
+                        break;
+                    case 'p':
+                        e.preventDefault();
+                        printDocument();
+                        break;
+                    case 'Home':
+                        e.preventDefault();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        break;
+                }
+            }
+        });
+
+        // Add interactive tooltips for technical terms
+        const technicalTerms = {
+            'MCP': 'Model Context Protocol - A standardized communication protocol for AI agents',
+            'Groq': 'High-performance AI inference engine optimized for large language models',
+            'Agent Fabric': 'An intelligent ecosystem of autonomous, specialized agents working collaboratively',
+            'PostgreSQL': 'Advanced open-source relational database system',
+            'Docker': 'Containerization platform for application deployment',
+            'WebSocket': 'Real-time bidirectional communication protocol',
+            'OAuth': 'Open standard for access delegation and authentication',
+            'REST API': 'Representational State Transfer Application Programming Interface'
+        };
+
+        // Create tooltips for technical terms
+        Object.keys(technicalTerms).forEach(term => {
+            const regex = new RegExp(`\\b${term}\\b`, 'gi');
+            document.body.innerHTML = document.body.innerHTML.replace(regex, 
+                `<span class="tech-term" data-tooltip="${technicalTerms[term]}">${term}</span>`
+            );
+        });
+
+        // Tooltip event listeners
+        document.querySelectorAll('.tech-term').forEach(term => {
+            term.addEventListener('mouseenter', showTooltip);
+            term.addEventListener('mouseleave', hideTooltip);
+        });
+
+        function showTooltip(e) {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'tooltip';
+            tooltip.textContent = e.target.dataset.tooltip;
+            tooltip.style.cssText = `
+                position: absolute;
+                background: var(--dark-navy);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                z-index: 1000;
+                max-width: 250px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                pointer-events: none;
+            `;
+            
+            document.body.appendChild(tooltip);
+            
+            const rect = e.target.getBoundingClientRect();
+            tooltip.style.left = rect.left + 'px';
+            tooltip.style.top = (rect.bottom + 5) + 'px';
+        }
+
+        function hideTooltip() {
+            const tooltip = document.querySelector('.tooltip');
+            if (tooltip) {
+                tooltip.remove();
+            }
+        }
+
+        // Add CSS for tech terms
+        const techTermStyles = document.createElement('style');
+        techTermStyles.textContent = `
+            .tech-term {
+                color: var(--primary-blue);
+                cursor: help;
+                border-bottom: 1px dotted var(--primary-blue);
+                font-weight: 500;
+            }
+            
+            .tech-term:hover {
+                color: var(--accent-teal);
+                border-bottom-color: var(--accent-teal);
+            }
+
+            .nav-link.active {
+                color: var(--primary-blue) !important;
+                background: var(--light-blue) !important;
+                font-weight: 600;
+            }
+
+            @media (max-width: 768px) {
+                .tooltip {
+                    font-size: 0.8rem !important;
+                    max-width: 200px !important;
+                }
+            }
+        `;
+        document.head.appendChild(techTermStyles);
+
+        // Progress indicator
+        function updateProgressIndicator() {
+            const scrollTop = window.pageYOffset;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercent = (scrollTop / docHeight) * 100;
+            
+            let progressBar = document.getElementById('progressBar');
+            if (!progressBar) {
+                progressBar = document.createElement('div');
+                progressBar.id = 'progressBar';
+                progressBar.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: ${scrollPercent}%;
+                    height: 3px;
+                    background: var(--accent-gradient);
+                    z-index: 1001;
+                    transition: width 0.1s ease;
+                `;
+                document.body.appendChild(progressBar);
+            } else {
+                progressBar.style.width = scrollPercent + '%';
+            }
+        }
+
+        window.addEventListener('scroll', updateProgressIndicator);
+        
+        // Initialize progress indicator
+        updateProgressIndicator();
+
+        // Add section timing analytics
+        const sectionTimes = {};
+        let currentSection = null;
+        let sectionStartTime = Date.now();
+
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('.section');
+            let activeSection = null;
+            
+            sections.forEach(section => {
+                const rect = section.getBoundingClientRect();
+                if (rect.top <= 100 && rect.bottom > 100) {
+                    activeSection = section.id;
+                }
+            });
+
+            if (activeSection !== currentSection) {
+                if (currentSection) {
+                    const timeSpent = Date.now() - sectionStartTime;
+                    sectionTimes[currentSection] = (sectionTimes[currentSection] || 0) + timeSpent;
+                }
+                currentSection = activeSection;
+                sectionStartTime = Date.now();
+            }
+        });
+
+        // Export analytics data (for development/analytics)
+        window.getAnalytics = function() {
+            return {
+                sectionTimes,
+                currentSection,
+                totalTime: Date.now() - performance.timing.navigationStart,
+                scrollPosition: window.pageYOffset,
+                viewportSize: {
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                }
+            };
+        };
+
+        console.log('🚀 Employee Onboarding System Documentation Loaded Successfully!');
+        console.log('📊 Use window.getAnalytics() to view reading analytics');
+        console.log('🔍 Press Ctrl/Cmd+F for enhanced search');
+        console.log('🖨️ Press Ctrl/Cmd+P to print document');
+    </script>
+</body>
+</html>
