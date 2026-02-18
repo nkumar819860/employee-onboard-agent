@@ -1,0 +1,51 @@
+{
+  "main": "agent-network.yaml",
+  "name": "EmployeeOnboardingAgentFabric",
+  "classifier": "agent-network",
+  "organizationId": "47562e5d-bf49-440a-a0f5-a9cea0a89aa9",
+  "descriptorVersion": "1.0.0",
+  "tags": [],
+  "metadata": {
+    "variables": {
+      "hrAgent": {
+        "url": {
+          "description": "HR Agent URL",
+          "default": "https://employee-onboarding-system-main.us-east-2.cloudhub.io",
+          "secret": false
+        }
+      },
+      "employeeOnboarding": {
+        "url": {
+          "description": "Employee Onboarding MCP Server URL",
+          "default": "https://employee-onboarding-system-employee.us-east-2.cloudhub.io",
+          "secret": false
+        }
+      },
+      "assetAllocation": {
+        "url": {
+          "description": "Asset Allocation MCP Server URL",
+          "default": "https://employee-onboarding-system-assets.us-east-2.cloudhub.io",
+          "secret": false
+        }
+      },
+      "emailNotification": {
+        "url": {
+          "description": "Email Notification MCP Server URL",
+          "default": "https://employee-onboarding-system-email.us-east-2.cloudhub.io",
+          "secret": false
+        }
+      },
+      "groq": {
+        "apiKey": {
+          "description": "Groq API Key for LLM Provider",
+          "default": "gsk_placeholder_key",
+          "secret": true
+        }
+      }
+    }
+  },
+  "dependencies": [],
+  "groupId": "47562e5d-bf49-440a-a0f5-a9cea0a89aa9",
+  "assetId": "employeeonboardingagentfabric",
+  "version": "1.0.0"
+}

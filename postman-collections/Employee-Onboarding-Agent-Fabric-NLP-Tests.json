@@ -1,0 +1,770 @@
+{
+  "info": {
+    "name": "Employee Onboarding Agent Fabric - NLP Testing",
+    "description": "Complete Postman collection to test the Employee Onboarding Agent Fabric with Natural Language Processing queries. This collection includes all API endpoints for testing employee onboarding, asset allocation, email notifications, and AI chat functionality.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "emp-onboard-nlp-test",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set dynamic variables for testing",
+          "pm.globals.set('timestamp', Date.now());",
+          "pm.globals.set('randomId', Math.floor(Math.random() * 10000));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://employee-onboarding-system-main.us-east-2.cloudhub.io",
+      "type": "string"
+    },
+    {
+      "key": "employee_service_url",
+      "value": "https://employee-onboarding-system-employee.us-east-2.cloudhub.io",
+      "type": "string"
+    },
+    {
+      "key": "asset_service_url",
+      "value": "https://employee-onboarding-system-assets.us-east-2.cloudhub.io",
+      "type": "string"
+    },
+    {
+      "key": "email_service_url",
+      "value": "https://employee-onboarding-system-email.us-east-2.cloudhub.io",
+      "type": "string"
+    },
+    {
+      "key": "groq_api_key",
+      "value": "{{GROQ_API_KEY}}",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "Bearer_Token_Here",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🚀 Health Checks",
+      "description": "Test the health and connectivity of all Agent Fabric services",
+      "item": [
+        {
+          "name": "Main Orchestration Health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Check health status of the main orchestration service"
+          },
+          "response": []
+        },
+        {
+          "name": "Employee Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{employee_service_url}}/health",
+              "host": [
+                "{{employee_service_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Asset Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{asset_service_url}}/health",
+              "host": [
+                "{{asset_service_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Email Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{email_service_url}}/health",
+              "host": [
+                "{{email_service_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🤖 NLP Chat Interface",
+      "description": "Test the AI-powered natural language processing for employee onboarding",
+      "item": [
+        {
+          "name": "Basic Employee Onboarding Query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Please onboard a new employee named John Smith in the Engineering department. He needs a laptop, phone, and ID card. Send him a welcome email with onboarding details.\",\n  \"context\": {\n    \"sessionId\": \"session_{{timestamp}}\",\n    \"userId\": \"test_user_{{randomId}}\",\n    \"timestamp\": \"{{$isoTimestamp}}\"\n  },\n  \"metadata\": {\n    \"clientType\": \"postman-test\",\n    \"version\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "chat"
+              ]
+            },
+            "description": "Test basic employee onboarding with natural language"
+          },
+          "response": []
+        },
+        {
+          "name": "Complex Multi-Employee Query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"We're onboarding 3 new team members: Sarah Chen as Marketing Manager, Mike Rodriguez as Senior Developer, and Lisa Park as Business Analyst. They all need standard equipment packages and welcome emails.\",\n  \"context\": {\n    \"sessionId\": \"session_{{timestamp}}\",\n    \"userId\": \"test_user_{{randomId}}\",\n    \"timestamp\": \"{{$isoTimestamp}}\"\n  },\n  \"metadata\": {\n    \"clientType\": \"postman-test\",\n    \"version\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "chat"
+              ]
+            },
+            "description": "Test complex multi-employee onboarding scenario"
+          }
+        },
+        {
+          "name": "Asset Inquiry Query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"What assets are available for allocation? Show me the current inventory status and available equipment.\",\n  \"context\": {\n    \"sessionId\": \"session_{{timestamp}}\",\n    \"userId\": \"test_user_{{randomId}}\",\n    \"timestamp\": \"{{$isoTimestamp}}\"\n  },\n  \"metadata\": {\n    \"clientType\": \"postman-test\",\n    \"version\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "chat"
+              ]
+            },
+            "description": "Test asset inventory inquiry"
+          }
+        },
+        {
+          "name": "Department-Specific Onboarding",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Onboard Jennifer Davis as Senior Sales Representative starting Monday. She needs a laptop, CRM access, sales materials, and company phone.\",\n  \"context\": {\n    \"sessionId\": \"session_{{timestamp}}\",\n    \"userId\": \"test_user_{{randomId}}\",\n    \"timestamp\": \"{{$isoTimestamp}}\"\n  },\n  \"metadata\": {\n    \"clientType\": \"postman-test\",\n    \"version\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "chat"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Error Handling - Incomplete Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Onboard a new person in the sales team.\",\n  \"context\": {\n    \"sessionId\": \"session_{{timestamp}}\",\n    \"userId\": \"test_user_{{randomId}}\",\n    \"timestamp\": \"{{$isoTimestamp}}\"\n  },\n  \"metadata\": {\n    \"clientType\": \"postman-test\",\n    \"version\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "chat"
+              ]
+            },
+            "description": "Test how the system handles incomplete information"
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 Employee Management",
+      "description": "Direct API calls for employee profile management",
+      "item": [
+        {
+          "name": "Complete Employee Onboarding",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee\": {\n    \"name\": \"John Smith\",\n    \"email\": \"john.smith@company.com\",\n    \"department\": \"Engineering\",\n    \"position\": \"Software Engineer\",\n    \"startDate\": \"2024-03-01\",\n    \"managerId\": \"MGR001\",\n    \"location\": \"New York Office\"\n  },\n  \"assets\": [\"laptop\", \"phone\", \"id-card\"],\n  \"notifications\": {\n    \"sendWelcomeEmail\": true,\n    \"notifyManager\": true,\n    \"emailTemplate\": \"engineering_welcome\"\n  },\n  \"workflow\": {\n    \"autoApprove\": false,\n    \"priority\": \"normal\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/onboardEmployee",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "onboardEmployee"
+              ]
+            },
+            "description": "Complete employee onboarding workflow"
+          }
+        },
+        {
+          "name": "Create Employee Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sarah Johnson\",\n  \"email\": \"sarah.johnson@company.com\",\n  \"department\": \"Marketing\",\n  \"position\": \"Marketing Manager\",\n  \"startDate\": \"2024-03-15\",\n  \"managerId\": \"MGR002\",\n  \"location\": \"Remote\",\n  \"employeeType\": \"Full-Time\",\n  \"salary\": 75000\n}"
+            },
+            "url": {
+              "raw": "{{employee_service_url}}/employees",
+              "host": [
+                "{{employee_service_url}}"
+              ],
+              "path": [
+                "employees"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Employee List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{employee_service_url}}/employees?department=Engineering&status=active",
+              "host": [
+                "{{employee_service_url}}"
+              ],
+              "path": [
+                "employees"
+              ],
+              "query": [
+                {
+                  "key": "department",
+                  "value": "Engineering"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Employee by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{employee_service_url}}/employees/EMP{{randomId}}",
+              "host": [
+                "{{employee_service_url}}"
+              ],
+              "path": [
+                "employees",
+                "EMP{{randomId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Initialize Database",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reset\": false,\n  \"seedData\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/initializeDatabase",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "initializeDatabase"
+              ]
+            },
+            "description": "Initialize the employee database with sample data"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Asset Management",
+      "description": "Test asset allocation and inventory management",
+      "item": [
+        {
+          "name": "Get Available Assets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{asset_service_url}}/assets",
+              "host": [
+                "{{asset_service_url}}"
+              ],
+              "path": [
+                "assets"
+              ]
+            },
+            "description": "Get list of all available assets"
+          }
+        },
+        {
+          "name": "Get Assets by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{asset_service_url}}/assets?category=Hardware&available=true",
+              "host": [
+                "{{asset_service_url}}"
+              ],
+              "path": [
+                "assets"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "Hardware"
+                },
+                {
+                  "key": "available",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Allocate Assets to Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"EMP{{randomId}}\",\n  \"assets\": [\n    {\n      \"assetType\": \"laptop\",\n      \"brand\": \"MacBook Pro\",\n      \"model\": \"16-inch M3\",\n      \"serialNumber\": \"LAP-{{timestamp}}\"\n    },\n    {\n      \"assetType\": \"phone\",\n      \"brand\": \"iPhone\",\n      \"model\": \"15 Pro\",\n      \"serialNumber\": \"PHN-{{timestamp}}\"\n    },\n    {\n      \"assetType\": \"id-card\",\n      \"cardNumber\": \"ID-{{randomId}}\",\n      \"accessLevel\": \"Standard\"\n    }\n  ],\n  \"allocationDate\": \"{{$isoTimestamp}}\",\n  \"approvedBy\": \"MGR001\"\n}"
+            },
+            "url": {
+              "raw": "{{asset_service_url}}/allocate",
+              "host": [
+                "{{asset_service_url}}"
+              ],
+              "path": [
+                "allocate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Return Assets",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"EMP{{randomId}}\",\n  \"assets\": [\n    {\n      \"serialNumber\": \"LAP-{{timestamp}}\",\n      \"condition\": \"Good\",\n      \"returnReason\": \"Employee departure\"\n    }\n  ],\n  \"returnDate\": \"{{$isoTimestamp}}\",\n  \"processedBy\": \"IT001\"\n}"
+            },
+            "url": {
+              "raw": "{{asset_service_url}}/return",
+              "host": [
+                "{{asset_service_url}}"
+              ],
+              "path": [
+                "return"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Asset Inventory Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{asset_service_url}}/inventory/report",
+              "host": [
+                "{{asset_service_url}}"
+              ],
+              "path": [
+                "inventory",
+                "report"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📧 Email Notifications",
+      "description": "Test email notification system",
+      "item": [
+        {
+          "name": "Send Welcome Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"john.smith@company.com\",\n  \"subject\": \"Welcome to the Team!\",\n  \"template\": \"welcome_engineering\",\n  \"variables\": {\n    \"employeeName\": \"John Smith\",\n    \"department\": \"Engineering\",\n    \"position\": \"Software Engineer\",\n    \"startDate\": \"March 1, 2024\",\n    \"manager\": \"Jane Doe\",\n    \"assets\": [\n      \"MacBook Pro 16-inch\",\n      \"iPhone 15 Pro\",\n      \"Employee ID Card\"\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{email_service_url}}/sendEmail",
+              "host": [
+                "{{email_service_url}}"
+              ],
+              "path": [
+                "sendEmail"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Send Manager Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"jane.doe@company.com\",\n  \"subject\": \"New Team Member: John Smith\",\n  \"template\": \"manager_notification\",\n  \"variables\": {\n    \"managerName\": \"Jane Doe\",\n    \"employeeName\": \"John Smith\",\n    \"department\": \"Engineering\",\n    \"position\": \"Software Engineer\",\n    \"startDate\": \"March 1, 2024\",\n    \"employeeEmail\": \"john.smith@company.com\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{email_service_url}}/sendEmail",
+              "host": [
+                "{{email_service_url}}"
+              ],
+              "path": [
+                "sendEmail"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Send Asset Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"john.smith@company.com\",\n  \"subject\": \"Your Company Assets Are Ready\",\n  \"template\": \"asset_notification\",\n  \"variables\": {\n    \"employeeName\": \"John Smith\",\n    \"assets\": [\n      {\n        \"name\": \"MacBook Pro 16-inch\",\n        \"serialNumber\": \"LAP-{{timestamp}}\",\n        \"pickupLocation\": \"IT Department - Floor 3\"\n      },\n      {\n        \"name\": \"iPhone 15 Pro\",\n        \"serialNumber\": \"PHN-{{timestamp}}\",\n        \"pickupLocation\": \"IT Department - Floor 3\"\n      }\n    ],\n    \"pickupDate\": \"March 1, 2024\",\n    \"pickupTime\": \"9:00 AM\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{email_service_url}}/sendEmail",
+              "host": [
+                "{{email_service_url}}"
+              ],
+              "path": [
+                "sendEmail"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Email Templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{email_service_url}}/templates",
+              "host": [
+                "{{email_service_url}}"
+              ],
+              "path": [
+                "templates"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 Integration Tests",
+      "description": "End-to-end integration testing scenarios",
+      "item": [
+        {
+          "name": "Complete Onboarding Workflow Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario\": \"complete_onboarding\",\n  \"employee\": {\n    \"name\": \"Test Employee {{randomId}}\",\n    \"email\": \"test.employee.{{randomId}}@company.com\",\n    \"department\": \"Engineering\",\n    \"position\": \"Software Engineer\",\n    \"startDate\": \"{{$isoTimestamp}}\"\n  },\n  \"requirements\": {\n    \"assets\": [\"laptop\", \"phone\", \"id-card\"],\n    \"notifications\": true,\n    \"autoApprove\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/test/integration",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "test",
+                "integration"
+              ]
+            },
+            "description": "Test complete end-to-end onboarding workflow"
+          }
+        },
+        {
+          "name": "Bulk Onboarding Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employees\": [\n    {\n      \"name\": \"Alice Johnson\",\n      \"email\": \"alice.johnson@company.com\",\n      \"department\": \"Marketing\",\n      \"position\": \"Marketing Specialist\",\n      \"assets\": [\"laptop\", \"phone\"]\n    },\n    {\n      \"name\": \"Bob Wilson\",\n      \"email\": \"bob.wilson@company.com\",\n      \"department\": \"Sales\",\n      \"position\": \"Sales Representative\",\n      \"assets\": [\"laptop\", \"phone\", \"sales-kit\"]\n    },\n    {\n      \"name\": \"Carol Davis\",\n      \"email\": \"carol.davis@company.com\",\n      \"department\": \"Finance\",\n      \"position\": \"Financial Analyst\",\n      \"assets\": [\"laptop\", \"calculator\"]\n    }\n  ],\n  \"batchId\": \"BATCH_{{timestamp}}\",\n  \"startDate\": \"2024-03-01\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/onboarding/bulk",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "onboarding",
+                "bulk"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Service Orchestration Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"testType\": \"service_orchestration\",\n  \"services\": [\"employee\", \"assets\", \"email\"],\n  \"scenario\": \"new_hire_complete\",\n  \"payload\": {\n    \"employeeName\": \"Integration Test User\",\n    \"department\": \"QA\",\n    \"testId\": \"TEST_{{timestamp}}\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/test/orchestration",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "test",
+                "orchestration"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧪 Performance Tests",
+      "description": "Test system performance and load handling",
+      "item": [
+        {
+          "name": "Load Test - Multiple Concurrent Requests",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Onboard employee {{randomId}} as Software Engineer in Engineering department with standard equipment package\",\n  \"context\": {\n    \"sessionId\": \"load_test_{{timestamp}}\",\n    \"userId\": \"load_user_{{randomId}}\",\n    \"timestamp\": \"{{$isoTimestamp}}\",\n    \"testType\": \"load_test\"\n  },\n  \"metadata\": {\n    \"clientType\": \"postman-load-test\",\n    \"version\": \"1.0.0\",\n    \"requestId\": \"REQ_{{timestamp}}_{{randomId}}\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "chat"
+              ]
+            },
+            "description": "Load test with concurrent NLP requests"
+          }
+        },
+        {
+          "name": "Response Time Test",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Test-Type",
+                "value": "performance"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/health?detailed=true&timestamp={{timestamp}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ],
+              "query": [
+                {
+                  "key": "detailed",
+                  "value": "true"
+                },
+                {
+                  "key": "timestamp",
+                  "value": "{{timestamp}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

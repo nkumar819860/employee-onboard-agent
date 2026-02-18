@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" 
+      xmlns:db="http://www.mulesoft.org/schema/mule/db" 
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" 
+      xmlns:email="http://www.mulesoft.org/schema/mule/email"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+      xmlns:mcp="http://www.mulesoft.org/schema/mule/mcp" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd 
+                          http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+                          http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+                          http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+                          http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+                          http://www.mulesoft.org/schema/mule/mcp http://www.mulesoft.org/schema/mule/mcp/current/mule-mcp.xsd">
+
+    <!-- Email Notification MCP Server Flows -->
+    
+    <flow name="send-welcome-email" doc:id="j0k1l2m3-n4o5-p6q7-r8s9-t0u1v2w3x4y5">
+        <http:listener config-ref="Email_Notification_Listener_config" path="/sendWelcomeEmail" doc:name="Send Welcome Email HTTP Listener" doc:id="o0p1q2r3-s4t5-u6v7-w8x9-y0z1a2b3c4d5"/>
+        <set-variable variableName="emailPayload" value="#[payload]" doc:name="Set Email Payload"/>
+        <mcp:call-tool doc:name="Call Email Tool" doc:id="t0u1v2w3-x4y5-z6a7-b8c9-d0e1f2g3h4i5" config-ref="Email_MCP_Config" toolName="sendWelcomeEmailTool">
+            <mcp:input><![CDATA[
+                {
+                    "employeeId": "#[vars.emailPayload.employeeId]",
+                    "firstName": "#[vars.emailPayload.firstName]",
+                    "lastName": "#[vars.emailPayload.lastName]",
+                    "email": "#[vars.emailPayload.email]",
+                    "department": "#[vars.emailPayload.department]"
+                }
+            ]]></mcp:input>
+        </mcp:call-tool>
+        <ee:transform doc:name="Create Welcome Email Content" doc:id="y0z1a2b3-c4d5-e6f7-g8h9-i0j1k2l3m4n5">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    to: vars.emailPayload.email,
+    subject: "Welcome to " ++ vars.emailPayload.department ++ " Department - " ++ vars.emailPayload.firstName ++ " " ++ vars.emailPayload.lastName,
+    body: "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .header { background-color: #007bff; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; }
+                .footer { background-color: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; }
+                .highlight { color: #007bff; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <h1>Welcome to Our Company!</h1>
+            </div>
+            <div class='content'>
+                <h2>Dear " ++ vars.emailPayload.firstName ++ " " ++ vars.emailPayload.lastName ++ ",</h2>
+                <p>We are excited to welcome you to the <span class='highlight'>" ++ vars.emailPayload.department ++ " Department</span>!</p>
+                <p>Your employee ID is: <span class='highlight'>" ++ vars.emailPayload.employeeId ++ "</span></p>
+                <p>As part of your onboarding process, you will receive:</p>
+                <ul>
+                    <li>Company laptop and equipment</li>
+                    <li>Employee ID card and access cards</li>
+                    <li>Department orientation materials</li>
+                    <li>IT security training access</li>
+                </ul>
+                <p>Please check your email regularly for updates on your onboarding progress.</p>
+                <p>If you have any questions, please don't hesitate to reach out to HR.</p>
+                <p>Welcome aboard!</p>
+            </div>
+            <div class='footer'>
+                <p>This is an automated message from the Employee Onboarding System</p>
+                <p>Sent on: " ++ (now() as String {format: "yyyy-MM-dd 'at' HH:mm:ss"}) ++ "</p>
+            </div>
+        </body>
+        </html>
+    ",
+    contentType: "text/html"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <email:send doc:name="Send Welcome Email" doc:id="d1e2f3g4-h5i6-j7k8-l9m0-n1o2p3q4r5s6" config-ref="Email_SMTP">
+            <email:to><![CDATA[#[payload.to]]]></email:to>
+            <email:subject><![CDATA[#[payload.subject]]]></email:subject>
+            <email:content><![CDATA[#[payload.body]]]></email:content>
+            <email:content-type><![CDATA[#[payload.contentType]]]></email:content-type>
+        </email:send>
+        <db:insert doc:name="Log Email Sent" doc:id="i1j2k3l4-m5n6-o7p8-q9r0-s1t2u3v4w5x6" config-ref="Database_Config">
+            <db:sql><![CDATA[INSERT INTO email_logs (employee_id, email_type, recipient, subject, sent_date, status) 
+                             VALUES (:employeeId, 'WELCOME', :recipient, :subject, NOW(), 'SENT')]]></db:sql>
+            <db:input-parameters><![CDATA[
+                {
+                    "employeeId": "#[vars.emailPayload.employeeId]",
+                    "recipient": "#[vars.emailPayload.email]",
+                    "subject": "#[payload.subject]"
+                }
+            ]]></db:input-parameters>
+        </db:insert>
+        <ee:transform doc:name="Transform Response" doc:id="n2o3p4q5-r6s7-t8u9-v0w1-x2y3z4a5b6c7">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    message: "Welcome email sent successfully",
+    employeeId: vars.emailPayload.employeeId,
+    recipient: vars.emailPayload.email,
+    emailType: "WELCOME",
+    sentAt: now(),
+    timestamp: now()
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <flow name="send-asset-allocation-email" doc:id="k1l2m3n4-o5p6-q7r8-s9t0-u1v2w3x4y5z6">
+        <http:listener config-ref="Email_Notification_Listener_config" path="/sendAssetAllocationEmail" doc:name="Send Asset Allocation Email HTTP Listener" doc:id="p1q2r3s4-t5u6-v7w8-x9y0-z1a2b3c4d5e6"/>
+        <set-variable variableName="assetEmailPayload" value="#[payload]" doc:name="Set Asset Email Payload"/>
+        <mcp:call-tool doc:name="Call Asset Email Tool" doc:id="u1v2w3x4-y5z6-a7b8-c9d0-e1f2g3h4i5j6" config-ref="Email_MCP_Config" toolName="sendAssetAllocationEmailTool">
+            <mcp:input><![CDATA[
+                {
+                    "employeeId": "#[vars.assetEmailPayload.employeeId]",
+                    "firstName": "#[vars.assetEmailPayload.firstName]",
+                    "lastName": "#[vars.assetEmailPayload.lastName]",
+                    "email": "#[vars.assetEmailPayload.email]",
+                    "allocatedAssets": "#[vars.assetEmailPayload.allocatedAssets]"
+                }
+            ]]></mcp:input>
+        </mcp:call-tool>
+        <ee:transform doc:name="Create Asset Allocation Email Content" doc:id="z1a2b3c4-d5e6-f7g8-h9i0-j1k2l3m4n5o6">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var assetList = vars.assetEmailPayload.allocatedAssets map (asset) -> (
+    "<li><strong>" ++ asset.assetType ++ "</strong>: " ++ asset.brand ++ " " ++ asset.model ++ 
+    " (Serial: " ++ asset.serialNumber ++ ")</li>"
+) joinBy ""
+---
+{
+    to: vars.assetEmailPayload.email,
+    subject: "Assets Allocated - " ++ vars.assetEmailPayload.firstName ++ " " ++ vars.assetEmailPayload.lastName,
+    body: "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .header { background-color: #28a745; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; }
+                .footer { background-color: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; }
+                .highlight { color: #28a745; font-weight: bold; }
+                .asset-list { background-color: #f8f9fa; padding: 15px; border-radius: 5px; }
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <h1>Assets Allocated</h1>
+            </div>
+            <div class='content'>
+                <h2>Dear " ++ vars.assetEmailPayload.firstName ++ " " ++ vars.assetEmailPayload.lastName ++ ",</h2>
+                <p>Great news! Your company assets have been allocated and are ready for pickup.</p>
+                <p>Employee ID: <span class='highlight'>" ++ vars.assetEmailPayload.employeeId ++ "</span></p>
+                <div class='asset-list'>
+                    <h3>Your Allocated Assets:</h3>
+                    <ul>" ++ assetList ++ "</ul>
+                </div>
+                <p><strong>Next Steps:</strong></p>
+                <ul>
+                    <li>Visit the IT department to collect your assets</li>
+                    <li>Bring a valid photo ID for verification</li>
+                    <li>Sign the asset acknowledgment form</li>
+                    <li>Set up your equipment following the provided guidelines</li>
+                </ul>
+                <p>Please collect your assets within 2 business days.</p>
+                <p>If you have any questions, please contact the IT department.</p>
+            </div>
+            <div class='footer'>
+                <p>This is an automated message from the Asset Allocation System</p>
+                <p>Sent on: " ++ (now() as String {format: "yyyy-MM-dd 'at' HH:mm:ss"}) ++ "</p>
+            </div>
+        </body>
+        </html>
+    ",
+    contentType: "text/html"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <email:send doc:name="Send Asset Allocation Email" doc:id="e2f3g4h5-i6j7-k8l9-m0n1-o2p3q4r5s6t7" config-ref="Email_SMTP">
+            <email:to><![CDATA[#[payload.to]]]></email:to>
+            <email:subject><![CDATA[#[payload.subject]]]></email:subject>
+            <email:content><![CDATA[#[payload.body]]]></email:content>
+            <email:content-type><![CDATA[#[payload.contentType]]]></email:content-type>
+        </email:send>
+        <db:insert doc:name="Log Asset Email Sent" doc:id="j2k3l4m5-n6o7-p8q9-r0s1-t2u3v4w5x6y7" config-ref="Database_Config">
+            <db:sql><![CDATA[INSERT INTO email_logs (employee_id, email_type, recipient, subject, sent_date, status) 
+                             VALUES (:employeeId, 'ASSET_ALLOCATION', :recipient, :subject, NOW(), 'SENT')]]></db:sql>
+            <db:input-parameters><![CDATA[
+                {
+                    "employeeId": "#[vars.assetEmailPayload.employeeId]",
+                    "recipient": "#[vars.assetEmailPayload.email]",
+                    "subject": "#[payload.subject]"
+                }
+            ]]></db:input-parameters>
+        </db:insert>
+        <ee:transform doc:name="Transform Response" doc:id="o3p4q5r6-s7t8-u9v0-w1x2-y3z4a5b6c7d8">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    message: "Asset allocation email sent successfully",
+    employeeId: vars.assetEmailPayload.employeeId,
+    recipient: vars.assetEmailPayload.email,
+    emailType: "ASSET_ALLOCATION",
+    assetsAllocated: sizeOf(vars.assetEmailPayload.allocatedAssets),
+    sentAt: now(),
+    timestamp: now()
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <flow name="send-onboarding-completion-email" doc:id="l2m3n4o5-p6q7-r8s9-t0u1-v2w3x4y5z6a7">
+        <http:listener config-ref="Email_Notification_Listener_config" path="/sendCompletionEmail" doc:name="Send Completion Email HTTP Listener" doc:id="q2r3s4t5-u6v7-w8x9-y0z1-a2b3c4d5e6f7"/>
+        <set-variable variableName="completionEmailPayload" value="#[payload]" doc:name="Set Completion Email Payload"/>
+        <mcp:call-tool doc:name="Call Completion Email Tool" doc:id="v2w3x4y5-z6a7-b8c9-d0e1-f2g3h4i5j6k7" config-ref="Email_MCP_Config" toolName="sendCompletionEmailTool">
+            <mcp:input><![CDATA[
+                {
+                    "employeeId": "#[vars.completionEmailPayload.employeeId]",
+                    "firstName": "#[vars.completionEmailPayload.firstName]",
+                    "lastName": "#[vars.completionEmailPayload.lastName]",
+                    "email": "#[vars.completionEmailPayload.email]",
+                    "department": "#[vars.completionEmailPayload.department]"
+                }
+            ]]></mcp:input>
+        </mcp:call-tool>
+        <ee:transform doc:name="Create Completion Email Content" doc:id="a3b4c5d6-e7f8-g9h0-i1j2-k3l4m5n6o7p8">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    to: vars.completionEmailPayload.email,
+    subject: "Onboarding Complete - Welcome to the Team, " ++ vars.completionEmailPayload.firstName ++ "!",
+    body: "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .header { background-color: #17a2b8; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; }
+                .footer { background-color: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; }
+                .highlight { color: #17a2b8; font-weight: bold; }
+                .success { background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; }
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <h1>🎉 Onboarding Complete!</h1>
+            </div>
+            <div class='content'>
+                <h2>Congratulations " ++ vars.completionEmailPayload.firstName ++ " " ++ vars.completionEmailPayload.lastName ++ "!</h2>
+                <div class='success'>
+                    <p><strong>Your onboarding process has been successfully completed!</strong></p>
+                </div>
+                <p>Employee ID: <span class='highlight'>" ++ vars.completionEmailPayload.employeeId ++ "</span></p>
+                <p>Department: <span class='highlight'>" ++ vars.completionEmailPayload.department ++ "</span></p>
+                <p>You have successfully completed all onboarding requirements:</p>
+                <ul>
+                    <li>✅ Personal information form completed</li>
+                    <li>✅ IT security training completed</li>
+                    <li>✅ Department orientation completed</li>
+                    <li>✅ Manager meeting completed</li>
+                    <li>✅ Workspace setup completed</li>
+                    <li>✅ Equipment allocation completed</li>
+                    <li>✅ System access setup completed</li>
+                    <li>✅ Benefits enrollment completed</li>
+                </ul>
+                <p><strong>What's Next:</strong></p>
+                <ul>
+                    <li>You now have full access to all company systems</li>
+                    <li>Your manager will schedule regular check-ins</li>
+                    <li>HR will send you information about company events and benefits</li>
+                    <li>Remember to review the employee handbook</li>
+                </ul>
+                <p>We're excited to have you as part of our team!</p>
+                <p>If you have any questions, please don't hesitate to reach out to your manager or HR.</p>
+            </div>
+            <div class='footer'>
+                <p>This is an automated message from the Employee Onboarding System</p>
+                <p>Sent on: " ++ (now() as String {format: "yyyy-MM-dd 'at' HH:mm:ss"}) ++ "</p>
+            </div>
+        </body>
+        </html>
+    ",
+    contentType: "text/html"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <email:send doc:name="Send Completion Email" doc:id="f3g4h5i6-j7k8-l9m0-n1o2-p3q4r5s6t7u8" config-ref="Email_SMTP">
+            <email:to><![CDATA[#[payload.to]]]></email:to>
+            <email:subject><![CDATA[#[payload.subject]]]></email:subject>
+            <email:content><![CDATA[#[payload.body]]]></email:content>
+            <email:content-type><![CDATA[#[payload.contentType]]]></email:content-type>
+        </email:send>
+        <db:insert doc:name="Log Completion Email Sent" doc:id="k3l4m5n6-o7p8-q9r0-s1t2-u3v4w5x6y7z8" config-ref="Database_Config">
+            <db:sql><![CDATA[INSERT INTO email_logs (employee_id, email_type, recipient, subject, sent_date, status) 
+                             VALUES (:employeeId, 'COMPLETION', :recipient, :subject, NOW(), 'SENT')]]></db:sql>
+            <db:input-parameters><![CDATA[
+                {
+                    "employeeId": "#[vars.completionEmailPayload.employeeId]",
+                    "recipient": "#[vars.completionEmailPayload.email]",
+                    "subject": "#[payload.subject]"
+                }
+            ]]></db:input-parameters>
+        </db:insert>
+        <ee:transform doc:name="Transform Response" doc:id="p4q5r6s7-t8u9-v0w1-x2y3-z4a5b6c7d8e9">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    message: "Onboarding completion email sent successfully",
+    employeeId: vars.completionEmailPayload.employeeId,
+    recipient: vars.completionEmailPayload.email,
+    emailType: "COMPLETION",
+    sentAt: now(),
+    timestamp: now()
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <flow name="get-email-logs" doc:id="m3n4o5p6-q7r8-s9t0-u1v2-w3x4y5z6a7b8">
+        <http:listener config-ref="Email_Notification_Listener_config" path="/getEmailLogs" doc:name="Get Email Logs HTTP Listener" doc:id="r3s4t5u6-v7w8-x9y0-z1a2-b3c4d5e6f7g8"/>
+        <db:select doc:name="Select Email Logs" doc:id="w3x4y5z6-a7b8-c9d0-e1f2-g3h4i5j6k7l8" config-ref="Database_Config">
+            <db:sql><![CDATA[SELECT * FROM email_logs ORDER BY sent_date DESC LIMIT 100]]></db:sql>
+        </db:select>
+        <ee:transform doc:name="Transform Response" doc:id="b4c5d6e7-f8g9-h0i1-j2k3-l4m5n6o7p8q9">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    emailLogs: payload,
+    totalLogs: sizeOf(payload),
+    timestamp: now()
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <flow name="get-employee-email-logs" doc:id="n4o5p6q7-r8s9-t0u1-v2w3-x4y5z6a7b8c9">
+        <http:listener config-ref="Email_Notification_Listener_config" path="/getEmployeeEmailLogs/{employeeId}" doc:name="Get Employee Email Logs HTTP Listener" doc:id="s4t5u6v7-w8x9-y0z1-a2b3-c4d5e6f7g8h9"/>
+        <set-variable variableName="employeeId" value="#[attributes.uriParams.employeeId]" doc:name="Set Employee ID"/>
+        <db:select doc:name="Select Employee Email Logs" doc:id="x4y5z6a7-b8c9-d0e1-f2g3-h4i5j6k7l8m9" config-ref="Database_Config">
+            <db:sql><![CDATA[SELECT * FROM email_logs WHERE employee_id = :employeeId ORDER BY sent_date DESC]]></db:sql>
+            <db:input-parameters><![CDATA[
+                {
+                    "employeeId": "#[vars.employeeId]"
+                }
+            ]]></db:input-parameters>
+        </db:select>
+        <ee:transform doc:name="Transform Response" doc:id="c5d6e7f8-g9h0-i1j2-k3l4-m5n6o7p8q9r0">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    employeeId: vars.employeeId,
+    emailLogs: payload,
+    totalLogs: sizeOf(payload),
+    timestamp: now()
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+</mule>

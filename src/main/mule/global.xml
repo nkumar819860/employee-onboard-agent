@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" 
+      xmlns:db="http://www.mulesoft.org/schema/mule/db" 
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" 
+      xmlns:email="http://www.mulesoft.org/schema/mule/email" 
+      xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+      xmlns:mcp="http://www.mulesoft.org/schema/mule/mcp" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd 
+                          http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+                          http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+                          http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd 
+                          http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+                          http://www.mulesoft.org/schema/mule/mcp http://www.mulesoft.org/schema/mule/mcp/current/mule-mcp.xsd">
+
+    <!-- HTTP Listener Configuration -->
+    <http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config">
+        <http:listener-connection host="0.0.0.0" port="8081"/>
+    </http:listener-config>
+
+    <!-- Employee Onboarding HTTP Listener Configuration -->
+    <http:listener-config name="Employee_Onboarding_Listener_config" doc:name="Employee Onboarding Listener config">
+        <http:listener-connection host="0.0.0.0" port="8082"/>
+    </http:listener-config>
+
+    <!-- Asset Allocation HTTP Listener Configuration -->
+    <http:listener-config name="Asset_Allocation_Listener_config" doc:name="Asset Allocation Listener config">
+        <http:listener-connection host="0.0.0.0" port="8083"/>
+    </http:listener-config>
+
+    <!-- Email Notification HTTP Listener Configuration -->
+    <http:listener-config name="Email_Notification_Listener_config" doc:name="Email Notification Listener config">
+        <http:listener-connection host="0.0.0.0" port="8084"/>
+    </http:listener-config>
+
+    <!-- Main Orchestration HTTP Listener Configuration -->
+    <http:listener-config name="Main_Orchestration_Listener_config" doc:name="Main Orchestration Listener config">
+        <http:listener-connection host="0.0.0.0" port="8080"/>
+    </http:listener-config>
+
+    <!-- HTTP Request Configuration for inter-service communication -->
+    <http:request-config name="Employee_Service_Request_config" doc:name="Employee Service Request config">
+        <http:request-connection host="localhost" port="8082"/>
+    </http:request-config>
+
+    <http:request-config name="Asset_Service_Request_config" doc:name="Asset Service Request config">
+        <http:request-connection host="localhost" port="8083"/>
+    </http:request-config>
+
+    <http:request-config name="Email_Service_Request_config" doc:name="Email Service Request config">
+        <http:request-connection host="localhost" port="8084"/>
+    </http:request-config>
+
+    <!-- Email SMTP Configuration -->
+    <email:smtp-config name="Email_SMTP" doc:name="Email SMTP">
+        <email:smtp-connection host="${email.smtp.host}" port="${email.smtp.port}" 
+                              user="${email.smtp.user}" password="${email.smtp.password}">
+            <email:properties>
+                <email:property key="mail.smtp.starttls.enable" value="true"/>
+                <email:property key="mail.smtp.auth" value="true"/>
+            </email:properties>
+        </email:smtp-connection>
+    </email:smtp-config>
+
+    <!-- In-Memory Database Configuration -->
+    <db:config name="Database_Config" doc:name="Database Config">
+        <db:generic-connection url="jdbc:h2:mem:employee_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+                              driverClassName="org.h2.Driver"
+                              user="sa"
+                              password=""/>
+    </db:config>
+
+    <!-- MCP Server Configurations -->
+    <mcp:config name="Employee_MCP_Config" doc:name="Employee MCP Config">
+        <mcp:connection serverName="employee-onboarding-server" 
+                       serverVersion="1.0.0"
+                       capabilities="tools,resources"/>
+    </mcp:config>
+
+    <mcp:config name="Asset_MCP_Config" doc:name="Asset MCP Config">
+        <mcp:connection serverName="asset-allocation-server" 
+                       serverVersion="1.0.0"
+                       capabilities="tools,resources"/>
+    </mcp:config>
+
+    <mcp:config name="Email_MCP_Config" doc:name="Email MCP Config">
+        <mcp:connection serverName="email-notification-server" 
+                       serverVersion="1.0.0"
+                       capabilities="tools,resources"/>
+    </mcp:config>
+
+    <!-- Global Error Handler -->
+    <error-handler name="Global_Error_Handler" doc:name="Global Error Handler">
+        <on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue">
+            <set-payload value='#[{
+                "error": true,
+                "message": error.description,
+                "timestamp": now(),
+                "correlationId": correlationId
+            }]' doc:name="Set Error Response"/>
+        </on-error-continue>
+    </error-handler>
+
+    <!-- Configuration Properties -->
+    <configuration-properties doc:name="Configuration properties" file="application.properties"/>
+
+</mule>

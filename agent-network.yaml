@@ -1,0 +1,147 @@
+schemaVersion: 1.0.0
+label: Employee Onboarding Agent Network
+brokers:
+    onboardingBroker:
+        card:
+            protocolVersion: 0.3.0
+            name: Employee Onboarding Broker
+            description: "This broker provides complete employee onboarding capabilities including profile creation, asset allocation, and email notifications through integrated MCP servers."
+            url: ${ingressgw.url}/onboarding
+            capabilities:
+                pushNotifications: true
+            version: 1.0.0
+            securitySchemes: {}
+            defaultInputModes:
+                - "application/json"
+                - "text/plain"
+            defaultOutputModes:
+                - "application/json"
+                - "text/plain"
+            skills:
+                - id: employee-onboarding
+                  name: "Complete Employee Onboarding"
+                  description: "Orchestrates the complete employee onboarding process including profile creation, asset allocation, and email notifications"
+                  examples:
+                      - "Onboard new employee John Doe in Engineering department"
+                      - "Create employee profile and allocate laptop and ID card"
+                      - "Send welcome email and track onboarding progress"
+                  inputModes:
+                      - "application/json"
+                  outputModes:
+                      - "application/json"
+                  tags: ["onboarding", "employee", "hr"]
+                - id: asset-management
+                  name: "Asset Allocation and Management"
+                  description: "Manages company assets including laptops, phones, ID cards, and other equipment allocation to employees"
+                  examples:
+                      - "Allocate laptop and phone to employee EMP12345"
+                      - "Check available assets in inventory"
+                      - "Return equipment from departing employee"
+                  inputModes:
+                      - "application/json"
+                  outputModes:
+                      - "application/json"
+                  tags: ["assets", "inventory", "equipment"]
+                - id: email-notifications
+                  name: "Email Notification System"
+                  description: "Sends automated email notifications for welcome messages, asset allocation updates, and onboarding completion"
+                  examples:
+                      - "Send welcome email to new employee"
+                      - "Notify employee about allocated assets"
+                      - "Send onboarding completion congratulations"
+                  inputModes:
+                      - "application/json"
+                  outputModes:
+                      - "application/json"
+                  tags: ["email", "notifications", "communication"]
+        spec:
+            llm:
+                ref:
+                    name: groq
+                configuration:
+                    model: llama-3.1-70b-versatile
+            instructions:
+                - "You are an expert HR assistant specializing in employee onboarding processes."
+                - "Always ensure complete data collection before starting onboarding process."
+                - "Coordinate between employee profile creation, asset allocation, and email notifications."
+                - "Maintain professional and welcoming communication tone in all interactions."
+                - "Track and report onboarding progress at each step."
+            links:
+                - agent:
+                      ref:
+                          name: hrAgent
+            tools:
+                - mcp:
+                      ref:
+                          name: employeeOnboardingServer
+                - mcp:
+                      ref:
+                          name: assetAllocationServer
+                - mcp:
+                      ref:
+                          name: emailNotificationServer
+agents:
+    hrAgent:
+        label: HR Onboarding Agent
+        metadata:
+            protocol: a2a
+            platform: MuleSoft
+mcpServers:
+    employeeOnboardingServer:
+        label: Employee Onboarding MCP Server
+        metadata:
+            transport:
+                kind: streamableHttp
+                path: /employee
+    assetAllocationServer:
+        label: Asset Allocation MCP Server
+        metadata:
+            transport:
+                kind: streamableHttp
+                path: /assets
+    emailNotificationServer:
+        label: Email Notification MCP Server
+        metadata:
+            transport:
+                kind: streamableHttp
+                path: /email
+llmProviders:
+    groq:
+        label: Groq
+        description: Groq LLM Provider for Agent Network
+        metadata:
+            platform: OpenAI
+connections:
+    hrAgentConnection:
+        kind: agent
+        ref:
+            name: hrAgent
+        spec:
+            url: ${hrAgent.url}
+    employeeOnboardingConnection:
+        kind: mcp
+        ref:
+            name: employeeOnboardingServer
+        spec:
+            url: ${employeeOnboarding.url}
+    assetAllocationConnection:
+        kind: mcp
+        ref:
+            name: assetAllocationServer
+        spec:
+            url: ${assetAllocation.url}
+    emailNotificationConnection:
+        kind: mcp
+        ref:
+            name: emailNotificationServer
+        spec:
+            url: ${emailNotification.url}
+    groq-connection:
+        kind: llm
+        ref:
+            name: groq
+        spec:
+            url: https://api.groq.com/openai/v1/
+            configuration:
+                apiKey: ${groq.apiKey}
+                timeout: 600000

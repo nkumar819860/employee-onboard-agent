@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" 
+      xmlns:db="http://www.mulesoft.org/schema/mule/db" 
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" 
+      xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+      xmlns:mcp="http://www.mulesoft.org/schema/mule/mcp" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd 
+                          http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+                          http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+                          http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+                          http://www.mulesoft.org/schema/mule/mcp http://www.mulesoft.org/schema/mule/mcp/current/mule-mcp.xsd">
+
+    <!-- Employee Onboarding MCP Server Flows -->
+    
+    <flow name="create-employee-profile" doc:id="a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6">
+        <http:listener config-ref="Employee_Onboarding_Listener_config" path="/createEmployee" doc:name="Create Employee HTTP Listener" doc:id="f1g2h3i4-j5k6-l7m8-n9o0-p1q2r3s4t5u6"/>
+        <set-variable variableName="employeePayload" value="#[payload]" doc:name="Set Employee Payload"/>
+        <mcp:call-tool doc:name="Call Create Employee Tool" doc:id="u1v2w3x4-y5z6-a7b8-c9d0-e1f2g3h4i5j6" config-ref="Employee_MCP_Config" toolName="createEmployeeTool">
+            <mcp:input><![CDATA[
+                {
+                    "employeeId": "#[vars.employeePayload.employeeId]",
+                    "firstName": "#[vars.employeePayload.firstName]",
+                    "lastName": "#[vars.employeePayload.lastName]",
+                    "department": "#[vars.employeePayload.department]"
+                }
+            ]]></mcp:input>
+        </mcp:call-tool>
+        <db:insert doc:name="Insert Employee" doc:id="k1l2m3n4-o5p6-q7r8-s9t0-u1v2w3x4y5z6" config-ref="Database_Config">
+            <db:sql><![CDATA[INSERT INTO employees (employee_id, first_name, last_name, department, status, created_date) VALUES (:employeeId, :firstName, :lastName, :department, 'onboarding', NOW())]]></db:sql>
+            <db:input-parameters><![CDATA[
+                {
+                    "employeeId": "#[vars.employeePayload.employeeId]",
+                    "firstName": "#[vars.employeePayload.firstName]",
+                    "lastName": "#[vars.employeePayload.lastName]",
+                    "department": "#[vars.employeePayload.department]"
+                }
+            ]]></db:input-parameters>
+        </db:insert>
+        <ee:transform doc:name="Transform Response" doc:id="t1u2v3w4-x5y6-z7a8-b9c0-d1e2f3g4h5i6">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    message: "Employee profile created successfully",
+    employeeId: vars.employeePayload.employeeId,
+    employee: {
+        id: vars.employeePayload.employeeId,
+        firstName: vars.employeePayload.firstName,
+        lastName: vars.employeePayload.lastName,
+        department: vars.employeePayload.department,
+        status: "onboarding",
+        createdAt: now()
+    }
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <flow name="get-employee-profile" doc:id="b2c3d4e5-f6g7-h8i9-j0k1-l2m3n4o5p6q7">
+        <http:listener config-ref="Employee_Onboarding_Listener_config" path="/getEmployee/{employeeId}" doc:name="Get Employee HTTP Listener" doc:id="g2h3i4j5-k6l7-m8n9-o0p1-q2r3s4t5u6v7"/>
+        <set-variable variableName="employeeId" value="#[attributes.uriParams.employeeId]" doc:name="Set Employee ID"/>
+        <db:select doc:name="Select Employee" doc:id="l2m3n4o5-p6q7-r8s9-t0u1-v2w3x4y5z6a7" config-ref="Database_Config">
+            <db:sql><![CDATA[SELECT * FROM employees WHERE employee_id = :employeeId]]></db:sql>
+            <db:input-parameters><![CDATA[
+                {
+                    "employeeId": "#[vars.employeeId]"
+                }
+            ]]></db:input-parameters>
+        </db:select>
+        <ee:transform doc:name="Transform Response" doc:id="u2v3w4x5-y6z7-a8b9-c0d1-e2f3g4h5i6j7">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+if (payload != [])
+{
+    success: true,
+    employee: payload[0]
+}
+else
+{
+    success: false,
+    error: "Employee not found"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <flow name="list-employees" doc:id="c3d4e5f6-g7h8-i9j0-k1l2-m3n4o5p6q7r8">
+        <http:listener config-ref="Employee_Onboarding_Listener_config" path="/listEmployees" doc:name="List Employees HTTP Listener" doc:id="h3i4j5k6-l7m8-n9o0-p1q2-r3s4t5u6v7w8"/>
+        <db:select doc:name="Select All Employees" doc:id="m3n4o5p6-q7r8-s9t0-u1v2-w3x4y5z6a7b8" config-ref="Database_Config">
+            <db:sql><![CDATA[SELECT * FROM employees ORDER BY created_date DESC]]></db:sql>
+        </db:select>
+        <ee:transform doc:name="Transform Response" doc:id="v3w4x5y6-z7a8-b9c0-d1e2-f3g4h5i6j7k8">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    employees: payload,
+    count: sizeOf(payload)
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <flow name="update-onboarding-task" doc:id="d4e5f6g7-h8i9-j0k1-l2m3-n4o5p6q7r8s9">
+        <http:listener config-ref="Employee_Onboarding_Listener_config" path="/updateTask" doc:name="Update Task HTTP Listener" doc:id="i4j5k6l7-m8n9-o0p1-q2r3-s4t5u6v7w8x9"/>
+        <set-variable variableName="taskPayload" value="#[payload]" doc:name="Set Task Payload"/>
+        <db:update doc:name="Update Employee Task" doc:id="n4o5p6q7-r8s9-t0u1-v2w3-x4y5z6a7b8c9" config-ref="Database_Config">
+            <db:sql><![CDATA[UPDATE employees SET onboarding_tasks = :tasks WHERE employee_id = :employeeId]]></db:sql>
+            <db:input-parameters><![CDATA[
+                {
+                    "employeeId": "#[vars.taskPayload.employeeId]",
+                    "tasks": "#[vars.taskPayload.tasks]"
+                }
+            ]]></db:input-parameters>
+        </db:update>
+        <ee:transform doc:name="Transform Response" doc:id="w4x5y6z7-a8b9-c0d1-e2f3-g4h5i6j7k8l9">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    message: "Onboarding task updated successfully",
+    employeeId: vars.taskPayload.employeeId
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+</mule>

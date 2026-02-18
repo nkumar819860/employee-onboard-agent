@@ -1,0 +1,17 @@
+{
+  "name": "employee-onboarding-system",
+  "minMuleVersion": "4.8.0",
+  "javaSpecificationVersions": ["8", "11", "17"],
+  "requiredProduct": "MULE_EE",
+  "classLoaderModelLoaderDescriptor": {
+    "id": "mule",
+    "attributes": {
+      "exportedPackages": [],
+      "exportedResources": []
+    }
+  },
+  "bundleDescriptorLoader": {
+    "id": "mule",
+    "attributes": {}
+  }
+}

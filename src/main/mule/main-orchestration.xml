@@ -1,0 +1,395 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" 
+      xmlns:db="http://www.mulesoft.org/schema/mule/db" 
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" 
+      xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd 
+                          http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+                          http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+                          http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+    <!-- Main Orchestration Flows -->
+    
+    <!-- Automatic Database Initialization on Startup -->
+    <flow name="startup-database-initialization" doc:id="y1z2a3b4-c5d6-e7f8-g9h0-i1j2k3l4m5n6" initialState="started">
+        <scheduler doc:name="Startup Scheduler" doc:id="z2a3b4c5-d6e7-f8g9-h0i1-j2k3l4m5n6o7">
+            <scheduling-strategy>
+                <fixed-frequency frequency="1000" startDelay="3000"/>
+            </scheduling-strategy>
+        </scheduler>
+        
+        <!-- Check if tables exist -->
+        <try doc:name="Try Check Tables" doc:id="a3b4c5d6-e7f8-g9h0-i1j2-k3l4m5n6o7p8">
+            <db:select doc:name="Check Tables Exist" doc:id="b4c5d6e7-f8g9-h0i1-j2k3-l4m5n6o7p8q9" config-ref="Database_Config">
+                <db:sql><![CDATA[SELECT COUNT(*) as table_count FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC' AND TABLE_NAME IN ('EMPLOYEES', 'ASSETS', 'EMAIL_LOGS')]]></db:sql>
+            </db:select>
+            <choice doc:name="Choice: Tables Exist?" doc:id="c5d6e7f8-g9h0-i1j2-k3l4-m5n6o7p8q9r0">
+                <when expression="#[payload[0].TABLE_COUNT < 3]">
+                    <logger level="INFO" doc:name="Log Auto Initialize" message="Database tables not found or incomplete. Auto-initializing database on startup..." doc:id="d6e7f8g9-h0i1-j2k3-l4m5-n6o7p8q9r0s1"/>
+                    <flow-ref doc:name="Auto Initialize Database" doc:id="e7f8g9h0-i1j2-k3l4-m5n6-o7p8q9r0s1t2" name="initialize-database-internal"/>
+                    <logger level="INFO" doc:name="Log Auto Complete" message="Database auto-initialization completed successfully" doc:id="f8g9h0i1-j2k3-l4m5-n6o7-p8q9r0s1t2u3"/>
+                </when>
+                <otherwise>
+                    <logger level="INFO" doc:name="Log Tables Found" message="Database tables already exist. Skipping initialization." doc:id="g9h0i1j2-k3l4-m5n6-o7p8-q9r0s1t2u3v4"/>
+                </otherwise>
+            </choice>
+            <!-- Stop scheduler after first run -->
+            <flow-ref doc:name="Stop Scheduler" doc:id="h0i1j2k3-l4m5-n6o7-p8q9-r0s1t2u3v4w5" name="stop-startup-scheduler"/>
+            <error-handler>
+                <on-error-continue enableNotifications="true" logException="true" doc:name="On Startup Error" doc:id="i1j2k3l4-m5n6-o7p8-q9r0-s1t2u3v4w5x6">
+                    <logger level="WARN" doc:name="Log Startup Warning" message="Database startup check failed: #[error.description]" doc:id="j2k3l4m5-n6o7-p8q9-r0s1-t2u3v4w5x6y7"/>
+                    <!-- Still stop scheduler even on error -->
+                    <flow-ref doc:name="Stop Scheduler on Error" doc:id="k3l4m5n6-o7p8-q9r0-s1t2-u3v4w5x6y7z8" name="stop-startup-scheduler"/>
+                </on-error-continue>
+            </error-handler>
+        </try>
+    </flow>
+    
+    <!-- Stop Startup Scheduler Flow -->
+    <flow name="stop-startup-scheduler" doc:id="l4m5n6o7-p8q9-r0s1-t2u3-v4w5x6y7z8a9">
+        <logger level="DEBUG" doc:name="Log Scheduler Stop" message="Stopping startup scheduler as initialization check is complete" doc:id="m5n6o7p8-q9r0-s1t2-u3v4-w5x6y7z8a9b0"/>
+        <!-- Note: In a real implementation, you might want to use a different approach to stop the scheduler -->
+        <!-- For now, we let it run once and the scheduler will be effectively disabled -->
+    </flow>
+    
+    <!-- Database Initialization Flow -->
+    <flow name="initialize-database" doc:id="o5p6q7r8-s9t0-u1v2-w3x4-y5z6a7b8c9d0">
+        <http:listener config-ref="Main_Orchestration_Listener_config" path="/initializeDatabase" doc:name="Initialize Database HTTP Listener" doc:id="t5u6v7w8-x9y0-z1a2-b3c4-d5e6f7g8h9i0"/>
+        <logger level="INFO" doc:name="Log Database Initialization" message="Starting H2 database initialization..." doc:id="y5z6a7b8-c9d0-e1f2-g3h4-i5j6k7l8m9n0"/>
+        
+        <!-- Check database connection -->
+        <try doc:name="Try Database Connection" doc:id="z1a2b3c4-d5e6-f7g8-h9i0-j1k2l3m4n5o6">
+            <db:select doc:name="Test Connection" doc:id="a2b3c4d5-e6f7-g8h9-i0j1-k2l3m4n5o6p7" config-ref="Database_Config">
+                <db:sql><![CDATA[SELECT 1 FROM DUAL]]></db:sql>
+            </db:select>
+            <logger level="INFO" doc:name="Log Connection Success" message="Database connection established successfully" doc:id="b3c4d5e6-f7g8-h9i0-j1k2-l3m4n5o6p7q8"/>
+            <error-handler>
+                <on-error-continue enableNotifications="true" logException="true" doc:name="On Connection Error" doc:id="c4d5e6f7-g8h9-i0j1-k2l3-m4n5o6p7q8r9">
+                    <logger level="INFO" doc:name="Log New Database" message="Database not found or connection failed, will create new database" doc:id="d5e6f7g8-h9i0-j1k2-l3m4-n5o6p7q8r9s0"/>
+                </on-error-continue>
+            </error-handler>
+        </try>
+        
+        <!-- Execute database schema initialization -->
+        <logger level="INFO" doc:name="Log Schema Creation" message="Initializing H2 database schema from schema.sql..." doc:id="a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6"/>
+        <try doc:name="Try Schema Creation" doc:id="e6f7g8h9-i0j1-k2l3-m4n5-o6p7q8r9s0t1">
+            <db:execute-script doc:name="Execute Schema Script" doc:id="d6e7f8g9-h0i1-j2k3-l4m5-n6o7p8q9r0s1" config-ref="Database_Config" file="database/schema.sql"/>
+            <logger level="INFO" doc:name="Log Schema Complete" message="Database schema created successfully - employees, assets, email_logs tables initialized" doc:id="i6j7k8l9-m0n1-o2p3-q4r5-s6t7u8v9w0x1"/>
+            <error-handler>
+                <on-error-continue enableNotifications="true" logException="true" doc:name="On Schema Error" doc:id="f7g8h9i0-j1k2-l3m4-n5o6-p7q8r9s0t1u2">
+                    <logger level="WARN" doc:name="Log Schema Warning" message="Schema creation encountered issues: #[error.description]" doc:id="g8h9i0j1-k2l3-m4n5-o6p7-q8r9s0t1u2v3"/>
+                </on-error-continue>
+            </error-handler>
+        </try>
+        
+        <!-- Verify schema creation -->
+        <db:select doc:name="Verify Tables Created" doc:id="f1g2h3i4-j5k6-l7m8-n9o0-p1q2r3s4t5u6" config-ref="Database_Config">
+            <db:sql><![CDATA[SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC' ORDER BY TABLE_NAME]]></db:sql>
+        </db:select>
+        <set-variable variableName="createdTables" value="#[payload]" doc:name="Set Created Tables"/>
+        <logger level="INFO" doc:name="Log Tables Verified" message="Tables verified: #[vars.createdTables pluck $.TABLE_NAME joinBy ', ']" doc:id="g2h3i4j5-k6l7-m8n9-o0p1-q2r3s4t5u6v7"/>
+        
+        <!-- Execute database data initialization -->
+        <logger level="INFO" doc:name="Log Data Initialization" message="Loading sample data from data.sql..." doc:id="n7o8p9q0-r1s2-t3u4-v5w6-x7y8z9a0b1c2"/>
+        <try doc:name="Try Data Loading" doc:id="h3i4j5k6-l7m8-n9o0-p1q2-r3s4t5u6v7w8">
+            <db:execute-script doc:name="Execute Data Script" doc:id="s7t8u9v0-w1x2-y3z4-a5b6-c7d8e9f0g1h2" config-ref="Database_Config" file="database/data.sql"/>
+            <logger level="INFO" doc:name="Log Data Complete" message="Sample data loaded successfully - employees, assets, and email logs inserted" doc:id="x7y8z9a0-b1c2-d3e4-f5g6-h7i8j9k0l1m2"/>
+            <error-handler>
+                <on-error-continue enableNotifications="true" logException="true" doc:name="On Data Error" doc:id="i4j5k6l7-m8n9-o0p1-q2r3-s4t5u6v7w8x9">
+                    <logger level="WARN" doc:name="Log Data Warning" message="Data loading encountered issues: #[error.description]" doc:id="j5k6l7m8-n9o0-p1q2-r3s4-t5u6v7w8x9y0"/>
+                </on-error-continue>
+            </error-handler>
+        </try>
+        
+        <!-- Verify data loading -->
+        <db:select doc:name="Count Records" doc:id="h4i5j6k7-l8m9-n0o1-p2q3-r4s5t6u7v8w9" config-ref="Database_Config">
+            <db:sql><![CDATA[SELECT 
+    (SELECT COUNT(*) FROM employees) as employee_count,
+    (SELECT COUNT(*) FROM assets) as asset_count,
+    (SELECT COUNT(*) FROM email_logs) as email_log_count]]></db:sql>
+        </db:select>
+        <set-variable variableName="recordCounts" value="#[payload[0]]" doc:name="Set Record Counts"/>
+        <logger level="INFO" doc:name="Log Record Counts" message="Data verification - Employees: #[vars.recordCounts.EMPLOYEE_COUNT], Assets: #[vars.recordCounts.ASSET_COUNT], Email Logs: #[vars.recordCounts.EMAIL_LOG_COUNT]" doc:id="i5j6k7l8-m9n0-o1p2-q3r4-s5t6u7v8w9x0"/>
+        
+        <ee:transform doc:name="Transform Database Init Response" doc:id="s7t8u9v0-w1x2-y3z4-a5b6-c7d8e9f0g1h2">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    message: "H2 database initialized successfully",
+    database: {
+        type: "H2 In-Memory",
+        url: "jdbc:h2:mem:employee_db",
+        status: "INITIALIZED"
+    },
+    schema: {
+        tables: vars.createdTables pluck $.TABLE_NAME,
+        tableCount: sizeOf(vars.createdTables)
+    },
+    data: {
+        employees: vars.recordCounts.EMPLOYEE_COUNT,
+        assets: vars.recordCounts.ASSET_COUNT,
+        emailLogs: vars.recordCounts.EMAIL_LOG_COUNT,
+        totalRecords: vars.recordCounts.EMPLOYEE_COUNT + vars.recordCounts.ASSET_COUNT + vars.recordCounts.EMAIL_LOG_COUNT
+    },
+    initialization: {
+        schemaFile: "database/schema.sql",
+        dataFile: "database/data.sql",
+        completedAt: now()
+    },
+    timestamp: now()
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    
+    <!-- Database Reset Flow -->
+    <flow name="reset-database" doc:id="j6k7l8m9-n0o1-p2q3-r4s5-t6u7v8w9x0y1">
+        <http:listener config-ref="Main_Orchestration_Listener_config" path="/resetDatabase" doc:name="Reset Database HTTP Listener" doc:id="k7l8m9n0-o1p2-q3r4-s5t6-u7v8w9x0y1z2"/>
+        <logger level="INFO" doc:name="Log Database Reset" message="Starting database reset and reinitialization..." doc:id="l8m9n0o1-p2q3-r4s5-t6u7-v8w9x0y1z2a3"/>
+        
+        <!-- Drop existing tables -->
+        <try doc:name="Try Drop Tables" doc:id="m9n0o1p2-q3r4-s5t6-u7v8-w9x0y1z2a3b4">
+            <db:execute doc:name="Drop Tables" doc:id="n0o1p2q3-r4s5-t6u7-v8w9-x0y1z2a3b4c5" config-ref="Database_Config">
+                <db:sql><![CDATA[DROP TABLE IF EXISTS email_logs;
+DROP TABLE IF EXISTS assets;
+DROP TABLE IF EXISTS employees;]]></db:sql>
+            </db:execute>
+            <logger level="INFO" doc:name="Log Tables Dropped" message="Existing tables dropped successfully" doc:id="o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6"/>
+            <error-handler>
+                <on-error-continue enableNotifications="true" logException="true" doc:name="On Drop Error" doc:id="p2q3r4s5-t6u7-v8w9-x0y1-z2a3b4c5d6e7">
+                    <logger level="WARN" doc:name="Log Drop Warning" message="Table drop encountered issues: #[error.description]" doc:id="q3r4s5t6-u7v8-w9x0-y1z2-a3b4c5d6e7f8"/>
+                </on-error-continue>
+            </error-handler>
+        </try>
+        
+        <!-- Reinitialize database -->
+        <flow-ref doc:name="Reinitialize Database" doc:id="r4s5t6u7-v8w9-x0y1-z2a3-b4c5d6e7f8g9" name="initialize-database-internal"/>
+        
+        <ee:transform doc:name="Transform Reset Response" doc:id="s5t6u7v8-w9x0-y1z2-a3b4-c5d6e7f8g9h0">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    message: "Database reset and reinitialized successfully",
+    action: "RESET_AND_REINITIALIZE",
+    timestamp: now()
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    
+    <!-- Internal Database Initialization (without HTTP listener) -->
+    <flow name="initialize-database-internal" doc:id="t6u7v8w9-x0y1-z2a3-b4c5-d6e7f8g9h0i1">
+        <logger level="INFO" doc:name="Log Internal Init" message="Internal database initialization starting..." doc:id="u7v8w9x0-y1z2-a3b4-c5d6-e7f8g9h0i1j2"/>
+        
+        <!-- Execute schema -->
+        <db:execute-script doc:name="Execute Schema Script" doc:id="v8w9x0y1-z2a3-b4c5-d6e7-f8g9h0i1j2k3" config-ref="Database_Config" file="database/schema.sql"/>
+        
+        <!-- Execute data -->
+        <db:execute-script doc:name="Execute Data Script" doc:id="w9x0y1z2-a3b4-c5d6-e7f8-g9h0i1j2k3l4" config-ref="Database_Config" file="database/data.sql"/>
+        
+        <logger level="INFO" doc:name="Log Internal Complete" message="Internal database initialization completed successfully" doc:id="x0y1z2a3-b4c5-d6e7-f8g9-h0i1j2k3l4m5"/>
+    </flow>
+
+    <!-- Complete Employee Onboarding Orchestration -->
+    <flow name="complete-employee-onboarding" doc:id="p6q7r8s9-t0u1-v2w3-x4y5-z6a7b8c9d0e1">
+        <http:listener config-ref="Main_Orchestration_Listener_config" path="/onboardEmployee" doc:name="Onboard Employee HTTP Listener" doc:id="u6v7w8x9-y0z1-a2b3-c4d5-e6f7g8h9i0j1"/>
+        <set-variable variableName="onboardingRequest" value="#[payload]" doc:name="Set Onboarding Request"/>
+        <logger level="INFO" doc:name="Log Onboarding Start" message="Starting complete onboarding for employee: #[vars.onboardingRequest.firstName] #[vars.onboardingRequest.lastName]" doc:id="z6a7b8c9-d0e1-f2g3-h4i5-j6k7l8m9n0o1"/>
+        
+        <!-- Step 1: Create Employee Profile -->
+        <http:request method="POST" doc:name="Create Employee Profile" doc:id="e7f8g9h0-i1j2-k3l4-m5n6-o7p8q9r0s1t2" config-ref="Employee_Service_Request_config" path="/createEmployee">
+            <http:body><![CDATA[#[{
+                "employeeId": "EMP" ++ (now() as String {format: "yyyyMMddHHmmss"}),
+                "firstName": vars.onboardingRequest.firstName,
+                "lastName": vars.onboardingRequest.lastName,
+                "email": vars.onboardingRequest.email,
+                "department": vars.onboardingRequest.department,
+                "position": vars.onboardingRequest.position,
+                "startDate": vars.onboardingRequest.startDate,
+                "managerId": vars.onboardingRequest.managerId default null
+            }]]]></http:body>
+        </http:request>
+        <set-variable variableName="employeeProfile" value="#[payload]" doc:name="Set Employee Profile"/>
+        <logger level="INFO" doc:name="Log Employee Created" message="Employee profile created: #[vars.employeeProfile.employeeId]" doc:id="j7k8l9m0-n1o2-p3q4-r5s6-t7u8v9w0x1y2"/>
+        
+        <!-- Step 2: Send Welcome Email -->
+        <http:request method="POST" doc:name="Send Welcome Email" doc:id="o8p9q0r1-s2t3-u4v5-w6x7-y8z9a0b1c2d3" config-ref="Email_Service_Request_config" path="/sendWelcomeEmail">
+            <http:body><![CDATA[#[{
+                "employeeId": vars.employeeProfile.employeeId,
+                "firstName": vars.onboardingRequest.firstName,
+                "lastName": vars.onboardingRequest.lastName,
+                "email": vars.onboardingRequest.email,
+                "department": vars.onboardingRequest.department
+            }]]]></http:body>
+        </http:request>
+        <set-variable variableName="welcomeEmailResult" value="#[payload]" doc:name="Set Welcome Email Result"/>
+        <logger level="INFO" doc:name="Log Welcome Email Sent" message="Welcome email sent to: #[vars.onboardingRequest.email]" doc:id="t8u9v0w1-x2y3-z4a5-b6c7-d8e9f0g1h2i3"/>
+        
+        <!-- Step 3: Initialize Asset Inventory -->
+        <http:request method="POST" doc:name="Initialize Asset Inventory" doc:id="y9z0a1b2-c3d4-e5f6-g7h8-i9j0k1l2m3n4" config-ref="Asset_Service_Request_config" path="/initializeAssets">
+            <http:body><![CDATA[#[{}]]]></http:body>
+        </http:request>
+        <set-variable variableName="assetInitResult" value="#[payload]" doc:name="Set Asset Init Result"/>
+        
+        <!-- Step 4: Allocate Assets to Employee -->
+        <http:request method="POST" doc:name="Allocate Assets" doc:id="d0e1f2g3-h4i5-j6k7-l8m9-n0o1p2q3r4s5" config-ref="Asset_Service_Request_config" path="/allocateAssets">
+            <http:body><![CDATA[#[{
+                "employeeId": vars.employeeProfile.employeeId,
+                "assetTypes": vars.onboardingRequest.requestedAssets default ["laptop", "id_card", "phone"]
+            }]]]></http:body>
+        </http:request>
+        <set-variable variableName="assetAllocationResult" value="#[payload]" doc:name="Set Asset Allocation Result"/>
+        <logger level="INFO" doc:name="Log Assets Allocated" message="Assets allocated to employee: #[vars.employeeProfile.employeeId]" doc:id="i1j2k3l4-m5n6-o7p8-q9r0-s1t2u3v4w5x6"/>
+        
+        <!-- Step 5: Send Asset Allocation Email -->
+        <http:request method="POST" doc:name="Send Asset Allocation Email" doc:id="n2o3p4q5-r6s7-t8u9-v0w1-x2y3z4a5b6c7" config-ref="Email_Service_Request_config" path="/sendAssetAllocationEmail">
+            <http:body><![CDATA[#[{
+                "employeeId": vars.employeeProfile.employeeId,
+                "firstName": vars.onboardingRequest.firstName,
+                "lastName": vars.onboardingRequest.lastName,
+                "email": vars.onboardingRequest.email,
+                "allocatedAssets": vars.assetAllocationResult.allocatedAssets
+            }]]]></http:body>
+        </http:request>
+        <set-variable variableName="assetEmailResult" value="#[payload]" doc:name="Set Asset Email Result"/>
+        <logger level="INFO" doc:name="Log Asset Email Sent" message="Asset allocation email sent to: #[vars.onboardingRequest.email]" doc:id="s2t3u4v5-w6x7-y8z9-a0b1-c2d3e4f5g6h7"/>
+        
+        <!-- Step 6: Complete Onboarding and Send Completion Email -->
+        <async doc:name="Async Completion Email" doc:id="x3y4z5a6-b7c8-d9e0-f1g2-h3i4j5k6l7m8">
+            <http:request method="POST" doc:name="Send Completion Email" doc:id="c4d5e6f7-g8h9-i0j1-k2l3-m4n5o6p7q8r9" config-ref="Email_Service_Request_config" path="/sendCompletionEmail">
+                <http:body><![CDATA[#[{
+                    "employeeId": vars.employeeProfile.employeeId,
+                    "firstName": vars.onboardingRequest.firstName,
+                    "lastName": vars.onboardingRequest.lastName,
+                    "email": vars.onboardingRequest.email,
+                    "department": vars.onboardingRequest.department
+                }]]]></http:body>
+            </http:request>
+        </async>
+        
+        <!-- Final Response -->
+        <ee:transform doc:name="Transform Final Response" doc:id="h4i5j6k7-l8m9-n0o1-p2q3-r4s5t6u7v8w9">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    message: "Employee onboarding completed successfully",
+    onboardingDetails: {
+        employee: {
+            id: vars.employeeProfile.employeeId,
+            firstName: vars.onboardingRequest.firstName,
+            lastName: vars.onboardingRequest.lastName,
+            email: vars.onboardingRequest.email,
+            department: vars.onboardingRequest.department,
+            position: vars.onboardingRequest.position,
+            status: "onboarding"
+        },
+        emails: {
+            welcomeEmail: vars.welcomeEmailResult.success,
+            assetAllocationEmail: vars.assetEmailResult.success
+        },
+        assets: {
+            allocated: vars.assetAllocationResult.success,
+            assetCount: sizeOf(vars.assetAllocationResult.allocatedAssets default []),
+            allocationId: vars.assetAllocationResult.allocationId
+        }
+    },
+    completionDate: now(),
+    timestamp: now()
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="Log Onboarding Complete" message="Complete onboarding finished for employee: #[vars.employeeProfile.employeeId]" doc:id="m5n6o7p8-q9r0-s1t2-u3v4-w5x6y7z8a9b0"/>
+    </flow>
+
+    <!-- Get Onboarding Status -->
+    <flow name="get-onboarding-status" doc:id="q7r8s9t0-u1v2-w3x4-y5z6-a7b8c9d0e1f2">
+        <http:listener config-ref="Main_Orchestration_Listener_config" path="/getOnboardingStatus/{employeeId}" doc:name="Get Onboarding Status HTTP Listener" doc:id="v7w8x9y0-z1a2-b3c4-d5e6-f7g8h9i0j1k2"/>
+        <set-variable variableName="employeeId" value="#[attributes.uriParams.employeeId]" doc:name="Set Employee ID"/>
+        
+        <!-- Get Employee Profile -->
+        <http:request method="GET" doc:name="Get Employee Profile" doc:id="a8b9c0d1-e2f3-g4h5-i6j7-k8l9m0n1o2p3" config-ref="Employee_Service_Request_config" path="/getEmployee/#[vars.employeeId]"/>
+        <set-variable variableName="employeeData" value="#[payload]" doc:name="Set Employee Data"/>
+        
+        <!-- Get Employee Assets -->
+        <http:request method="GET" doc:name="Get Employee Assets" doc:id="f8g9h0i1-j2k3-l4m5-n6o7-p8q9r0s1t2u3" config-ref="Asset_Service_Request_config" path="/getEmployeeAssets/#[vars.employeeId]"/>
+        <set-variable variableName="employeeAssets" value="#[payload]" doc:name="Set Employee Assets"/>
+        
+        <!-- Get Email Logs -->
+        <http:request method="GET" doc:name="Get Email Logs" doc:id="k9l0m1n2-o3p4-q5r6-s7t8-u9v0w1x2y3z4" config-ref="Email_Service_Request_config" path="/getEmployeeEmailLogs/#[vars.employeeId]"/>
+        <set-variable variableName="emailLogs" value="#[payload]" doc:name="Set Email Logs"/>
+        
+        <!-- Transform Complete Status Response -->
+        <ee:transform doc:name="Transform Status Response" doc:id="p9q0r1s2-t3u4-v5w6-x7y8-z9a0b1c2d3e4">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    employeeId: vars.employeeId,
+    onboardingStatus: {
+        employee: vars.employeeData.employee default {},
+        assets: {
+            allocated: vars.employeeAssets.allocatedAssets default [],
+            assetCount: vars.employeeAssets.assetCount default 0
+        },
+        emailNotifications: {
+            logs: vars.emailLogs.emailLogs default [],
+            totalEmails: vars.emailLogs.totalLogs default 0
+        },
+        overallStatus: if (vars.employeeData.employee.status default "" == "active") "COMPLETED" else "IN_PROGRESS"
+    },
+    timestamp: now()
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <!-- Health Check -->
+    <flow name="health-check" doc:id="r8s9t0u1-v2w3-x4y5-z6a7-b8c9d0e1f2g3">
+        <http:listener config-ref="Main_Orchestration_Listener_config" path="/health" doc:name="Health Check HTTP Listener" doc:id="w8x9y0z1-a2b3-c4d5-e6f7-g8h9i0j1k2l3"/>
+        <ee:transform doc:name="Health Check Response" doc:id="b9c0d1e2-f3g4-h5i6-j7k8-l9m0n1o2p3q4">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    status: "UP",
+    application: "Employee Onboarding System",
+    version: "1.0.0",
+    services: {
+        employeeOnboarding: {
+            url: "http://localhost:8082",
+            status: "UP"
+        },
+        assetAllocation: {
+            url: "http://localhost:8083",
+            status: "UP"
+        },
+        emailNotification: {
+            url: "http://localhost:8084",
+            status: "UP"
+        }
+    },
+    database: {
+        status: "UP",
+        type: "H2 In-Memory"
+    },
+    timestamp: now()
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+</mule>

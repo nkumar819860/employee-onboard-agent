@@ -1,0 +1,169 @@
+# Employee Onboarding System - Git Ignore File
+
+# =============================================================================
+# CREDENTIALS AND SECRETS (NEVER COMMIT THESE!)
+# =============================================================================
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.p12
+*.jks
+credentials.json
+secrets.properties
+local.properties
+
+# Anypoint Studio and MuleSoft
+.metadata/
+.mule/
+.studio/
+target/
+bin/
+logs/
+deployments/
+
+# Maven
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE Files
+.idea/
+*.iml
+*.iws
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary Files
+*.tmp
+*.temp
+*.log
+*.cache
+
+# Node.js (if using npm for any tooling)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Package Files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.tar
+*.zip
+
+# Backup Files
+*.backup
+*.bak
+*.orig
+
+# Test Results
+TEST-*.xml
+target/surefire-reports/
+
+# CloudHub Deployment Artifacts
+cloudhub-application.json
+app-*.zip
+
+# Exchange Assets
+exchange-docs/
+.exchange/
+
+# Local Database Files
+*.db
+*.sqlite
+*.sqlite3
+
+# =============================================================================
+# PROJECT SPECIFIC IGNORES
+# =============================================================================
+
+# MCP Server specific files
+mcp-servers/*/node_modules/
+mcp-servers/*/.env
+mcp-servers/*/dist/
+mcp-servers/*/build/
+
+# Agent Network build artifacts
+agent-network/build/
+agent-network/dist/
+
+# Documentation build artifacts
+docs/_build/
+docs/.doctrees/
+
+# Local configuration overrides
+*-local.xml
+*-local.properties
+*-local.yaml
+*-local.yml
+
+# =============================================================================
+# KEEP THESE FILES (WHITELIST)
+# =============================================================================
+!.env.template
+!README.md
+!CREDENTIALS_SETUP_GUIDE.md
+!DEPLOYMENT_INSTRUCTIONS.md
+!*.md
+
+# =============================================================================
+# DEVELOPMENT ENVIRONMENT
+# =============================================================================
+.venv/
+venv/
+ENV/
+env/
+.python-version
+
+# =============================================================================
+# NOTES FOR DEVELOPERS
+# =============================================================================
+# 
+# IMPORTANT: Never commit credentials to version control!
+# 
+# Safe to commit:
+# - .env.template (template file without real credentials)
+# - Configuration files with placeholder values
+# - Documentation files
+# 
+# Never commit:
+# - .env (contains real credentials)
+# - Any file with actual API keys, passwords, or secrets
+# - Local configuration overrides
+# 
+# If you accidentally commit credentials:
+# 1. Remove them from the repository immediately
+# 2. Revoke/regenerate the compromised credentials
+# 3. Update all environments with new credentials
+# 
+# For more information, see CREDENTIALS_SETUP_GUIDE.md
