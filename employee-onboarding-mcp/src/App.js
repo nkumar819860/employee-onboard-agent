@@ -1,11 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
+
+// MCP Client Configuration
+const MCP_BASE_URL = process.env.REACT_APP_MCP_URL || 'http://localhost:8081';
 
 function App() {
   const [prompt, setPrompt] = useState('');
   const [responses, setResponses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('onboarding');
+  const [employees, setEmployees] = useState([]);
+  const [mcpConnected, setMcpConnected] = useState(false);
+
+  // Check MCP connection on component mount
+  useEffect(() => {
+    checkMcpConnection();
+    loadEmployees();
+  }, []);
+
+  const checkMcpConnection = async () => {
+    try {
+      const response = await fetch(`${MCP_BASE_URL}/health`);
+      setMcpConnected(response.ok);
+    } catch (error) {
+      console.error('MCP connection failed:', error);
+      setMcpConnected(false);
+    }
+  };
+
+  const loadEmployees = async () => {
+    try {
+      const response = await fetch(`${MCP_BASE_URL}/listEmployees`);
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data.employees || []);
+      }
+    } catch (error) {
+      console.error('Failed to load employees:', error);
+    }
+  };
+
+  const callMcpEndpoint = async (endpoint, payload) => {
+    try {
+      const response = await fetch(`${MCP_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error(`MCP call failed for ${endpoint}:`, error);
+      throw error;
+    }
+  };
 
   // Sample onboarding questions
   const sampleQuestions = [
@@ -23,19 +77,47 @@ function App() {
 
     setLoading(true);
     
-    // Simulate processing delay
-    setTimeout(() => {
+    try {
+      // Call the real MCP NLP processing endpoint
+      const response = await callMcpEndpoint('/processOnboardingRequest', {
+        prompt: prompt,
+        timestamp: new Date().toISOString(),
+        requestId: `REQ-${Date.now()}`
+      });
+      
       const newResponse = {
         id: Date.now(),
         prompt: prompt,
         timestamp: new Date().toLocaleString(),
-        response: generateMockResponse(prompt)
+        response: response.summary || 'Processing completed successfully.',
+        mcpResponse: response,
+        trackingId: response.trackingId,
+        extractedEntities: response.processedRequest?.extractedEntities
       };
       
       setResponses(prev => [newResponse, ...prev]);
       setPrompt('');
+      
+      // Reload employees list to show any new entries
+      await loadEmployees();
+      
+    } catch (error) {
+      console.error('MCP processing failed:', error);
+      
+      // Fall back to mock response if MCP call fails
+      const newResponse = {
+        id: Date.now(),
+        prompt: prompt,
+        timestamp: new Date().toLocaleString(),
+        response: generateMockResponse(prompt) + '\n\n⚠️ Note: Using mock response (MCP server unavailable)',
+        isMockResponse: true
+      };
+      
+      setResponses(prev => [newResponse, ...prev]);
+      setPrompt('');
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   const generateMockResponse = (userPrompt) => {

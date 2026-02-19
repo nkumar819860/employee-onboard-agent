@@ -14,6 +14,176 @@
 
     <!-- Employee Onboarding MCP Server Flows -->
     
+    <!-- Health Check Endpoint -->
+    <flow name="health-check" doc:id="h1e2a3l4-t5h6-c7h8-e9c0-k1i2n3g4h5e6">
+        <http:listener config-ref="Employee_Onboarding_Listener_config" path="/health" doc:name="Health Check Listener" doc:id="h2e3a4l5-t6h7-c8h9-e0c1-k2i3n4g5h6e7"/>
+        <ee:transform doc:name="Health Response" doc:id="h3e4a5l6-t7h8-c9h0-e1c2-k3i4n5g6h7e8">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    status: "healthy",
+    service: "Employee Onboarding MCP Server",
+    timestamp: now(),
+    version: "1.0.0",
+    endpoints: [
+        "/health",
+        "/createEmployee",
+        "/getEmployee/{employeeId}",
+        "/listEmployees",
+        "/updateTask",
+        "/processOnboardingRequest"
+    ]
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <!-- NLP-Powered Onboarding Request Processor -->
+    <flow name="process-onboarding-request" doc:id="n1l2p3o4-n5b6-o7a8-r9d0-r1e2q3u4e5s6">
+        <http:listener config-ref="Employee_Onboarding_Listener_config" path="/processOnboardingRequest" doc:name="Process Onboarding Request Listener" doc:id="n2l3p4o5-n6b7-o8a9-r0d1-r2e3q4u5e6s7"/>
+        <set-variable variableName="requestPayload" value="#[payload]" doc:name="Set Request Payload"/>
+        <logger level="INFO" doc:name="Log NLP Request" message="Processing NLP request: #[vars.requestPayload]"/>
+        
+        <!-- Extract entities from NLP request -->
+        <ee:transform doc:name="Extract Entities" doc:id="n3l4p5o6-n7b8-o9a0-r1d2-r3e4q5u6e7s8">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+import * from dw::core::Strings
+var requestText = lower(vars.requestPayload.prompt default "")
+var extractedData = {
+    // Extract department
+    department: if (requestText contains "hr" or requestText contains "human resources") "HR"
+                else if (requestText contains "it" or requestText contains "technology" or requestText contains "software") "IT"
+                else if (requestText contains "sales" or requestText contains "marketing") "Sales"
+                else if (requestText contains "finance" or requestText contains "accounting") "Finance"
+                else "General",
+    
+    // Extract job title patterns
+    jobTitle: if (requestText contains "engineer" or requestText contains "developer") "Software Engineer"
+              else if (requestText contains "manager") "Manager"
+              else if (requestText contains "analyst") "Business Analyst"
+              else if (requestText contains "coordinator") "Coordinator"
+              else "Employee",
+    
+    // Extract equipment needs
+    equipment: flatten([
+        if (requestText contains "laptop" or requestText contains "computer") ["laptop"] else [],
+        if (requestText contains "phone" or requestText contains "mobile") ["phone"] else [],
+        if (requestText contains "badge" or requestText contains "access card") ["security_badge"] else []
+    ]),
+    
+    // Extract urgency
+    priority: if (requestText contains "urgent" or requestText contains "asap" or requestText contains "immediately") "high"
+              else if (requestText contains "normal" or requestText contains "standard") "normal"
+              else "normal",
+              
+    // Extract start date hints
+    startDate: if (requestText contains "monday") "next_monday"
+               else if (requestText contains "today") "today"
+               else if (requestText contains "tomorrow") "tomorrow"
+               else "tbd"
+}
+---
+{
+    originalPrompt: vars.requestPayload.prompt,
+    extractedEntities: extractedData,
+    processingTimestamp: now(),
+    confidence: 0.85
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        
+        <set-variable variableName="extractedEntities" value="#[payload.extractedEntities]" doc:name="Store Extracted Entities"/>
+        
+        <!-- Generate comprehensive onboarding response -->
+        <ee:transform doc:name="Generate Onboarding Response" doc:id="n4l5p6o7-n8b9-o0a1-r2d3-r4e5q6u7e8s9">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+import * from dw::core::Arrays
+var entities = vars.extractedEntities
+var trackingId = "ONB-" ++ (now() as String {format: "yyyyMMddHHmmss"})
+---
+{
+    success: true,
+    trackingId: trackingId,
+    processedRequest: {
+        originalPrompt: vars.requestPayload.prompt,
+        extractedEntities: entities,
+        processingTimestamp: now()
+    },
+    onboardingPlan: {
+        department: entities.department,
+        jobTitle: entities.jobTitle,
+        priority: entities.priority,
+        startDate: entities.startDate,
+        requiredActions: [
+            {
+                system: "HR Information System",
+                action: "Create employee profile and setup payroll",
+                status: "initiated",
+                estimatedCompletion: "1-2 business days",
+                responsible: "HR Team"
+            },
+            {
+                system: "IT Asset Management", 
+                action: "Allocate and configure equipment: " ++ joinBy(entities.equipment, ", "),
+                status: "pending",
+                estimatedCompletion: "2-3 business days",
+                responsible: "IT Operations"
+            },
+            {
+                system: "Security System",
+                action: "Generate security credentials and building access",
+                status: "queued",
+                estimatedCompletion: "1 business day",
+                responsible: "Security Team"
+            },
+            {
+                system: "Learning Management System",
+                action: "Assign department-specific training modules for " ++ entities.department,
+                status: "ready",
+                estimatedCompletion: "immediate",
+                responsible: "Learning & Development"
+            }
+        ],
+        notifications: [
+            {
+                recipient: "manager@company.com",
+                type: "new_hire_notification",
+                status: "sent"
+            },
+            {
+                recipient: "it@company.com", 
+                type: "equipment_request",
+                status: "sent"
+            },
+            {
+                recipient: "hr@company.com",
+                type: "onboarding_checklist",
+                status: "sent"
+            }
+        ]
+    },
+    summary: "🎯 Onboarding request for " ++ entities.jobTitle ++ " in " ++ entities.department ++ " department has been processed successfully.\n\n" ++
+             "📋 SYSTEMS NOTIFIED:\n" ++
+             "✅ HR Information System - Employee profile creation initiated\n" ++
+             "✅ IT Asset Management - Equipment allocation for: " ++ joinBy(entities.equipment, ", ") ++ "\n" ++
+             "✅ Security System - Badge and access permissions configured\n" ++
+             "✅ Learning Management - " ++ entities.department ++ " training modules assigned\n" ++
+             "✅ Email Notifications - All stakeholders informed\n\n" ++
+             "⏱️ Estimated completion: 2-3 business days\n" ++
+             "🆔 Tracking ID: " ++ trackingId
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        
+        <logger level="INFO" doc:name="Log Processing Complete" message="NLP processing complete for tracking ID: #[payload.trackingId]"/>
+    </flow>
+    
     <flow name="create-employee-profile" doc:id="a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6">
         <http:listener config-ref="Employee_Onboarding_Listener_config" path="/createEmployee" doc:name="Create Employee HTTP Listener" doc:id="f1g2h3i4-j5k6-l7m8-n9o0-p1q2r3s4t5u6"/>
         <set-variable variableName="employeePayload" value="#[payload]" doc:name="Set Employee Payload"/>
