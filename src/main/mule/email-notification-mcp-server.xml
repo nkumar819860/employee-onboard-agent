@@ -3,387 +3,368 @@
       xmlns:db="http://www.mulesoft.org/schema/mule/db" 
       xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
       xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" 
+      xmlns:email="http://www.mulesoft.org/schema/mule/email" 
       xmlns:http="http://www.mulesoft.org/schema/mule/http" 
-      xmlns:email="http://www.mulesoft.org/schema/mule/email"
+      xmlns:mcp="http://www.mulesoft.org/schema/mule/mcp" 
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
       xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd 
                           http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
                           http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
-                          http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-                          http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+                          http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd 
+                          http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+                          http://www.mulesoft.org/schema/mule/mcp http://www.mulesoft.org/schema/mule/mcp/current/mule-mcp.xsd">
 
     <!-- Email Notification MCP Server Flows -->
     
-    <flow name="send-welcome-email" doc:id="e1m2a3i4-l5n6-o7t8-i9f0-i1c2a3t4i5o6">
-        <http:listener config-ref="Email_Notification_Listener_config" path="/mcp/tools/send-email" doc:name="Send Email Listener" doc:id="e2m3a4i5-l6n7-o8t9-i0f1-i2c3a4t5i6o7" allowedMethods="POST"/>
-        <set-variable variableName="emailRequest" value="#[payload]" doc:name="Set Email Request"/>
-        <logger level="INFO" doc:name="Log Email Request" message="Processing email notification request: #[vars.emailRequest]"/>
-        
-        <!-- Validate Email Recipients -->
-        <choice doc:name="Valid Email Recipients?" doc:id="e3m4a5i6-l7n8-o9t0-i1f2-i3c4a5t6i7o8">
-            <when expression="#[vars.emailRequest.to != null and sizeOf(vars.emailRequest.to) > 0]">
-                
-                <!-- Log Email Notification -->
-                <db:insert doc:name="Log Email Notification" doc:id="e4m5a6i7-l8n9-o0t1-i2f3-i4c5a6t7i8o9" config-ref="Database_Config">
-                    <db:sql><![CDATA[
-                        INSERT INTO email_notifications (
-                            recipient_email,
-                            subject,
-                            template_type,
-                            status,
-                            sent_date,
-                            metadata
-                        ) VALUES (
-                            :recipientEmail,
-                            :subject,
-                            :templateType,
-                            'SENT',
-                            CURRENT_TIMESTAMP,
-                            :metadata
-                        )
-                    ]]></db:sql>
-                    <db:input-parameters><![CDATA[
-                        {
-                            "recipientEmail": vars.emailRequest.to[0],
-                            "subject": vars.emailRequest.subject,
-                            "templateType": vars.emailRequest.template default "welcome_employee",
-                            "metadata": write(vars.emailRequest, "application/json")
-                        }
-                    ]]></db:input-parameters>
-                </db:insert>
-                
-                <!-- Generate Email Content -->
-                <ee:transform doc:name="Generate Email Content" doc:id="e5m6a7i8-l9n0-o1t2-i3f4-i5c6a7t8i9o0">
-                    <ee:message>
-                        <ee:set-payload><![CDATA[%dw 2.0
-output application/json
-var employee = vars.emailRequest.data.employee default {}
-var assets = vars.emailRequest.data.assets default []
-var department = vars.emailRequest.data.department default "Company"
-var emailBody = 
-"<!DOCTYPE html>
-<html>
-<head>
-    <meta charset='utf-8'>
-    <title>Welcome to " ++ department ++ "</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px; border-radius: 10px; }
-        .header { background: #007bff; color: white; padding: 20px; text-align: center; border-radius: 8px; }
-        .content { padding: 20px; background: white; margin: 20px 0; border-radius: 8px; }
-        .assets { background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 15px 0; }
-        .footer { text-align: center; color: #666; font-size: 0.9em; }
-        ul { list-style-type: none; padding-left: 0; }
-        li { padding: 5px 0; }
-        .highlight { background: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0; }
-    </style>
-</head>
-<body>
-    <div class='container'>
-        <div class='header'>
-            <h1>🎉 Welcome to " ++ department ++ "!</h1>
-        </div>
-        
-        <div class='content'>
-            <h2>Dear " ++ (employee.firstName default "New Team Member") ++ ",</h2>
-            
-            <p>We're thrilled to welcome you to our team! Your onboarding process has been successfully initiated.</p>
-            
-            <div class='highlight'>
-                <h3>📋 Your Details:</h3>
-                <ul>
-                    <li><strong>Name:</strong> " ++ (employee.firstName default "") ++ " " ++ (employee.lastName default "") ++ "</li>
-                    <li><strong>Position:</strong> " ++ (employee.position default "Team Member") ++ "</li>
-                    <li><strong>Department:</strong> " ++ department ++ "</li>
-                    <li><strong>Start Date:</strong> " ++ (employee.startDate default "TBD") ++ "</li>
-                    <li><strong>Manager:</strong> " ++ (employee.manager default "HR Team") ++ "</li>
-                </ul>
-            </div>" ++
-
-            (if (sizeOf(assets) > 0) 
-                "<div class='assets'>
-                    <h3>💻 Equipment Allocated:</h3>
-                    <ul>" ++ 
-                    (assets reduce ((asset, acc = "") -> 
-                        acc ++ "<li>✅ " ++ asset.type ++ " (ID: " ++ asset.id ++ ")</li>"
-                    )) ++
-                    "</ul>
-                    <p><em>Your equipment will be ready for pickup on your first day at the IT desk.</em></p>
-                </div>"
-            else "") ++
-
-            "<div class='highlight'>
-                <h3>🗓️ Next Steps:</h3>
-                <ol>
-                    <li>Report to HR Reception at 9:00 AM on your start date</li>
-                    <li>Complete your employment documentation</li>
-                    <li>Attend new employee orientation (11:00 AM)</li>
-                    <li>Meet with your manager and team (2:00 PM)</li>
-                    <li>Begin department-specific training</li>
-                </ol>
-            </div>
-            
-            <p>If you have any questions before your start date, please don't hesitate to contact:</p>
-            <ul>
-                <li>📧 <strong>HR Team:</strong> hr@company.com</li>
-                <li>📞 <strong>Phone:</strong> (555) 123-4567</li>
-                <li>👤 <strong>Your Manager:</strong> " ++ (employee.manager default "HR Team") ++ "</li>
-            </ul>
-            
-            <p>We look forward to having you on the team and seeing all the great things you'll accomplish!</p>
-        </div>
-        
-        <div class='footer'>
-            <p>Welcome aboard! 🚀<br>
-            The " ++ department ++ " Team<br>
-            <em>This email was automatically generated by our Employee Onboarding System</em></p>
-        </div>
-    </div>
-</body>
-</html>"
----
-{
-    emailContent: emailBody,
-    plainTextContent: "Welcome to " ++ department ++ "!\n\n" ++
-                     "Dear " ++ (employee.firstName default "New Team Member") ++ ",\n\n" ++
-                     "We're thrilled to welcome you to our team as " ++ (employee.position default "Team Member") ++ ".\n\n" ++
-                     "Your start date: " ++ (employee.startDate default "TBD") ++ "\n" ++
-                     "Your manager: " ++ (employee.manager default "HR Team") ++ "\n\n" ++
-                     (if (sizeOf(assets) > 0) 
-                        "Equipment allocated: " ++ (assets map $.type joinBy ", ") ++ "\n\n"
-                     else "") ++
-                     "Please report to HR Reception at 9:00 AM on your start date.\n\n" ++
-                     "Best regards,\nThe " ++ department ++ " Team"
-}]]></ee:set-payload>
-                    </ee:message>
-                </ee:transform>
-                
-                <!-- Simulate Email Sending -->
-                <logger level="INFO" doc:name="Simulate Email Send" message="📧 Sending welcome email to: #[vars.emailRequest.to joinBy ', '] with subject: #[vars.emailRequest.subject]"/>
-                <logger level="DEBUG" doc:name="Email Content Debug" message="Email HTML content generated: #[payload.emailContent[0..200]]..."/>
-                
-                <!-- Update Email Status -->
-                <db:update doc:name="Update Email Status" doc:id="e6m7a8i9-l0n1-o2t3-i4f5-i6c7a8t9i0o1" config-ref="Database_Config">
-                    <db:sql><![CDATA[
-                        UPDATE email_notifications 
-                        SET status = 'DELIVERED', 
-                            delivered_date = CURRENT_TIMESTAMP
-                        WHERE recipient_email = :recipientEmail 
-                        AND sent_date = (SELECT MAX(sent_date) FROM email_notifications WHERE recipient_email = :recipientEmail)
-                    ]]></db:sql>
-                    <db:input-parameters><![CDATA[
-                        {
-                            "recipientEmail": vars.emailRequest.to[0]
-                        }
-                    ]]></db:input-parameters>
-                </db:update>
-                
-                <ee:transform doc:name="Email Success Response" doc:id="e7m8a9i0-l1n2-o3t4-i5f6-i7c8a9t0i1o2">
-                    <ee:message>
-                        <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-    success: true,
-    message: "Welcome email sent successfully",
-    notification: {
-        messageId: "MSG-" ++ (now() as String {format: "yyyyMMddHHmmss"}),
-        recipients: vars.emailRequest.to,
-        cc: vars.emailRequest.cc default [],
-        subject: vars.emailRequest.subject,
-        template: vars.emailRequest.template default "welcome_employee",
-        sentDate: now() as String,
-        status: "DELIVERED",
-        trackingId: "EML-" ++ (now() as String {format: "yyyyMMddHHmmss"})
-    }
-}]]></ee:set-payload>
-                    </ee:message>
-                </ee:transform>
-            </when>
-            <otherwise>
-                <ee:transform doc:name="Invalid Email Request" doc:id="e8m9a0i1-l2n3-o4t5-i6f7-i8c9a0t1i2o3">
-                    <ee:message>
-                        <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-    success: false,
-    message: "Invalid email request - recipients missing",
-    error: "INVALID_RECIPIENTS",
-    requiredFields: ["to"],
-    receivedFields: keysOf(vars.emailRequest)
-}]]></ee:set-payload>
-                    </ee:message>
-                    <ee:variables>
-                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
-                    </ee:variables>
-                </ee:transform>
-            </otherwise>
-        </choice>
-    </flow>
-
-    <flow name="get-email-templates" doc:id="f1m2a3i4-l5n6-o7t8-e9m0-p1l2a3t4e5s6">
-        <http:listener config-ref="Email_Notification_Listener_config" path="/mcp/tools/get-templates" doc:name="Get Templates Listener" doc:id="f2m3a4i5-l6n7-o8t9-e0m1-p2l3a4t5e6s7" allowedMethods="GET"/>
-        
-        <ee:transform doc:name="Available Templates Response" doc:id="f3m4a5i6-l7n8-o9t0-e1m2-p3l4a5t6e7s8">
+    <!-- Health Check Endpoint -->
+    <flow name="email-health-check" doc:id="e1m2a3i4-l5h6-e7a8-l9t0-h1c2h3e4c5k6">
+        <http:listener config-ref="Email_Notification_Listener_config" path="/email/health" doc:name="Email Health Check Listener" doc:id="e2m3a4i5-l6h7-e8a9-l0t1-h2c3h4e5c6k7"/>
+        <ee:transform doc:name="Email Health Response" doc:id="e3m4a5i6-l7h8-e9a0-l1t2-h3c4h5e6c7k8">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-    success: true,
-    templates: [
-        {
-            name: "welcome_employee",
-            description: "Welcome email for new employees",
-            requiredFields: ["employee", "department"],
-            optionalFields: ["assets", "manager"],
-            category: "onboarding"
-        },
-        {
-            name: "welcome_engineering",
-            description: "Engineering department welcome email",
-            requiredFields: ["employee", "assets"],
-            optionalFields: ["team", "mentor"],
-            category: "department_specific"
-        },
-        {
-            name: "welcome_hr",
-            description: "HR department welcome email", 
-            requiredFields: ["employee", "policies"],
-            optionalFields: ["training_schedule"],
-            category: "department_specific"
-        },
-        {
-            name: "welcome_sales",
-            description: "Sales department welcome email",
-            requiredFields: ["employee", "territory"],
-            optionalFields: ["sales_tools", "crm_access"],
-            category: "department_specific"
-        },
-        {
-            name: "equipment_notification",
-            description: "Equipment allocation notification",
-            requiredFields: ["employee", "assets"],
-            optionalFields: ["pickup_instructions"],
-            category: "logistics"
-        },
-        {
-            name: "manager_notification",
-            description: "New hire notification for managers",
-            requiredFields: ["manager", "employee"],
-            optionalFields: ["meeting_schedule"],
-            category: "management"
-        }
-    ],
-    totalTemplates: 6,
-    categories: ["onboarding", "department_specific", "logistics", "management"]
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-    </flow>
-
-    <flow name="get-email-history" doc:id="g1m2a3i4-l5h6-i7s8-t9o0-r1y2g3e4t5h6">
-        <http:listener config-ref="Email_Notification_Listener_config" path="/mcp/tools/get-email-history" doc:name="Get Email History Listener" doc:id="g2m3a4i5-l6h7-i8s9-t0o1-r2y3g4e5t6h7" allowedMethods="GET"/>
-        <set-variable variableName="employeeEmail" value="#[attributes.queryParams.email]" doc:name="Set Employee Email Filter"/>
-        <set-variable variableName="limit" value="#[attributes.queryParams.limit default 50]" doc:name="Set Query Limit"/>
-        
-        <db:select doc:name="Get Email History" doc:id="g3m4a5i6-l7h8-i9s0-t1o2-r3y4g5e6t7h8" config-ref="Database_Config">
-            <db:sql><![CDATA[
-                SELECT * FROM email_notifications 
-                WHERE (:employeeEmail IS NULL OR recipient_email = :employeeEmail)
-                ORDER BY sent_date DESC 
-                LIMIT :limit
-            ]]></db:sql>
-            <db:input-parameters><![CDATA[
-                {
-                    "employeeEmail": vars.employeeEmail,
-                    "limit": vars.limit as Number
-                }
-            ]]></db:input-parameters>
-        </db:select>
-        
-        <ee:transform doc:name="Email History Response" doc:id="g4m5a6i7-l8h9-i0s1-t2o3-r4y5g6e7t8h9">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-    success: true,
-    emailHistory: payload map {
-        id: $.id,
-        recipientEmail: $.recipient_email,
-        subject: $.subject,
-        templateType: $.template_type,
-        status: $.status,
-        sentDate: $.sent_date as String,
-        deliveredDate: $.delivered_date as String,
-        metadata: if ($.metadata != null) read($.metadata, "application/json") else {}
-    },
-    totalEmails: sizeOf(payload),
-    filter: if (vars.employeeEmail != null) {
-        email: vars.employeeEmail
-    } else {
-        scope: "all"
-    }
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-    </flow>
-
-    <flow name="email-health-check" doc:id="h1m2a3i4-l5n6-o7t8-h9e0-a1l2t3h4c5h6">
-        <http:listener config-ref="Email_Notification_Listener_config" path="/mcp/email/health" doc:name="Email Health Check Listener" doc:id="h2m3a4i5-l6n7-o8t9-h0e1-a2l3t4h5c6h7" allowedMethods="GET"/>
-        
-        <try doc:name="Try Email Health Check" doc:id="h3m4a5i6-l7n8-o9t0-h1e2-a3l4t5h6c7h8">
-            <db:select doc:name="Email Service Health Check" doc:id="h4m5a6i7-l8n9-o0t1-h2e3-a4l5t6h7c8h9" config-ref="Database_Config">
-                <db:sql><![CDATA[SELECT COUNT(*) as total_emails FROM email_notifications WHERE sent_date > CURRENT_DATE - 1]]></db:sql>
-            </db:select>
-            
-            <ee:transform doc:name="Healthy Response" doc:id="h5m6a7i8-l9n0-o1t2-h3e4-a5l6t7h8c9h0">
-                <ee:message>
-                    <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
     status: "healthy",
     service: "Email Notification MCP Server",
-    timestamp: now() as String,
-    database: "connected",
+    timestamp: now(),
     version: "1.0.0",
-    emailsSentToday: payload[0].total_emails,
     endpoints: [
-        "/mcp/tools/send-email",
-        "/mcp/tools/get-templates",
-        "/mcp/tools/get-email-history",
-        "/mcp/email/health"
+        "/email/health",
+        "/email/sendWelcome",
+        "/email/sendAssetAllocation",
+        "/email/sendCompletion",
+        "/email/logs/{employeeId}"
     ]
 }]]></ee:set-payload>
-                </ee:message>
-            </ee:transform>
-            
-            <error-handler>
-                <on-error-continue>
-                    <ee:transform doc:name="Unhealthy Response" doc:id="h6m7a8i9-l0n1-o2t3-h4e5-a6l7t8h9c0h1">
-                        <ee:message>
-                            <ee:set-payload><![CDATA[%dw 2.0
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <!-- Send Welcome Email -->
+    <flow name="send-welcome-email" doc:id="s1e2n3d4-w5e6-l7c8-o9m0-e1e2m3a4i5l6">
+        <http:listener config-ref="Email_Notification_Listener_config" path="/email/sendWelcome" doc:name="Send Welcome Email Listener" doc:id="s2e3n4d5-w6e7-l8c9-o0m1-e2e3m4a5i6l7"/>
+        <set-variable variableName="emailRequest" value="#[payload]" doc:name="Set Email Request"/>
+        <logger level="INFO" doc:name="Log Welcome Email" message="Sending welcome email to: #[vars.emailRequest.email]"/>
+        
+        <!-- Generate welcome email content -->
+        <ee:transform doc:name="Generate Welcome Email" doc:id="s3e4n5d6-w7e8-l9c0-o1m2-e3e4m5a6i7l8">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
-    status: "unhealthy",
-    service: "Email Notification MCP Server",
-    timestamp: now() as String,
-    database: "disconnected",
-    error: error.description,
-    version: "1.0.0"
+    to: vars.emailRequest.email,
+    subject: "Welcome to the Company, " ++ vars.emailRequest.firstName ++ "!",
+    body: "Dear " ++ vars.emailRequest.firstName ++ " " ++ vars.emailRequest.lastName ++ ",\n\n" ++
+          "Welcome to our company! We are thrilled to have you join our " ++ vars.emailRequest.department ++ " team.\n\n" ++
+          "Your employee onboarding process has begun, and we will guide you through each step to ensure a smooth transition.\n\n" ++
+          "What happens next:\n" ++
+          "• IT equipment will be allocated to you shortly\n" ++
+          "• You will receive access credentials for company systems\n" ++
+          "• Your manager will be in touch to schedule your first team meeting\n" ++
+          "• HR will provide you with important company information and policies\n\n" ++
+          "If you have any questions during your onboarding, please don't hesitate to reach out to your HR representative.\n\n" ++
+          "Once again, welcome aboard!\n\n" ++
+          "Best regards,\n" ++
+          "The " ++ vars.emailRequest.department ++ " Team\n\n" ++
+          "---\n" ++
+          "Employee ID: " ++ (vars.emailRequest.employeeId default "To be assigned") ++ "\n" ++
+          "Department: " ++ vars.emailRequest.department ++ "\n" ++
+          "Start Date: " ++ (now() as String {format: "MMM dd, yyyy"})
 }]]></ee:set-payload>
-                        </ee:message>
-                        <ee:variables>
-                            <ee:set-variable variableName="httpStatus">503</ee:set-variable>
-                        </ee:variables>
-                    </ee:transform>
+            </ee:message>
+        </ee:transform>
+        
+        <set-variable variableName="emailContent" value="#[payload]" doc:name="Set Email Content"/>
+        
+        <!-- Try to send email, but continue even if it fails (for demo) -->
+        <try doc:name="Try Send Email" doc:id="s4e5n6d7-w8e9-l0c1-o2m3-e4e5m6a7i8l9">
+            <email:send doc:name="Send Welcome Email" doc:id="s5e6n7d8-w9e0-l1c2-o3m4-e5e6m7a8i9l0" config-ref="Email_SMTP">
+                <email:to-addresses>
+                    <email:to-address value="#[vars.emailContent.to]"/>
+                </email:to-addresses>
+                <email:subject>#[vars.emailContent.subject]</email:subject>
+                <email:body>
+                    <email:content>#[vars.emailContent.body]</email:content>
+                </email:body>
+            </email:send>
+            <set-variable variableName="emailStatus" value="sent" doc:name="Set Email Status Success"/>
+            <set-variable variableName="emailError" value="" doc:name="Set No Error"/>
+            <error-handler>
+                <on-error-continue enableNotifications="true" logException="true" doc:name="On Email Error">
+                    <set-variable variableName="emailStatus" value="failed" doc:name="Set Email Status Failed"/>
+                    <set-variable variableName="emailError" value="#[error.description default 'Unknown email error']" doc:name="Set Email Error"/>
+                    <logger level="WARN" doc:name="Log Email Warning" message="Failed to send welcome email to #[vars.emailRequest.email]: #[vars.emailError]"/>
                 </on-error-continue>
             </error-handler>
         </try>
+        
+        <!-- Log email attempt to database -->
+        <db:insert doc:name="Log Email" doc:id="s6e7n8d9-w0e1-l2c3-o4m5-e6e7m8a9i0l1" config-ref="Database_Config">
+            <db:sql><![CDATA[INSERT INTO email_logs (employee_id, email_type, recipient_email, subject, message_body, status, error_message, sent_date) VALUES (:employeeId, :emailType, :recipient, :subject, :messageBody, :status, :error, NOW())]]></db:sql>
+            <db:input-parameters><![CDATA[{
+                "employeeId": vars.emailRequest.employeeId,
+                "emailType": "welcome",
+                "recipient": vars.emailContent.to,
+                "subject": vars.emailContent.subject,
+                "messageBody": vars.emailContent.body,
+                "status": vars.emailStatus,
+                "error": vars.emailError
+            }]]></db:input-parameters>
+        </db:insert>
+        
+        <!-- Response -->
+        <ee:transform doc:name="Welcome Email Response" doc:id="s7e8n9d0-w1e2-l3c4-o5m6-e7e8m9a0i1l2">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: vars.emailStatus == "sent",
+    message: if (vars.emailStatus == "sent") "Welcome email sent successfully" else "Welcome email failed to send",
+    emailDetails: {
+        recipient: vars.emailContent.to,
+        subject: vars.emailContent.subject,
+        status: vars.emailStatus,
+        error: vars.emailError,
+        timestamp: now()
+    }
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <!-- Send Asset Allocation Email -->
+    <flow name="send-asset-allocation-email" doc:id="s1e2n3d4-a5s6-s7e8-t9a0-l1l2o3c4a5t6">
+        <http:listener config-ref="Email_Notification_Listener_config" path="/email/sendAssetAllocation" doc:name="Send Asset Allocation Email Listener" doc:id="s2e3n4d5-a6s7-s8e9-t0a1-l2l3o4c5a6t7"/>
+        <set-variable variableName="emailRequest" value="#[payload]" doc:name="Set Email Request"/>
+        <logger level="INFO" doc:name="Log Asset Email" message="Sending asset allocation email to: #[vars.emailRequest.email]"/>
+        
+        <!-- Generate asset allocation email content -->
+        <ee:transform doc:name="Generate Asset Email" doc:id="s3e4n5d6-a7s8-s9e0-t1a2-l3l4o5c6a7t8">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var allocatedAssets = vars.emailRequest.allocatedAssets default []
+var assetList = allocatedAssets map (asset) ->
+    "• " ++ asset.assetType ++ ": " ++ asset.assetName ++ " (Serial: " ++ asset.serialNumber ++ ")"
+---
+{
+    to: vars.emailRequest.email,
+    subject: "Your IT Equipment Has Been Assigned - " ++ vars.emailRequest.firstName ++ " " ++ vars.emailRequest.lastName,
+    body: "Dear " ++ vars.emailRequest.firstName ++ ",\n\n" ++
+          "Great news! Your IT equipment has been allocated and is ready for pickup.\n\n" ++
+          "Assigned Equipment:\n" ++
+          (if (sizeOf(assetList) > 0) joinBy(assetList, "\n") else "• Standard employee package") ++ "\n\n" ++
+          "Pickup Instructions:\n" ++
+          "• Location: IT Storage Room (Building A, Floor 2)\n" ++
+          "• Hours: Monday-Friday, 9:00 AM - 5:00 PM\n" ++
+          "• Please bring a valid photo ID for equipment pickup\n" ++
+          "• Contact IT Support at ext. 4357 if you have any questions\n\n" ++
+          "Equipment Setup:\n" ++
+          "• IT will help you set up your equipment during pickup\n" ++
+          "• Your login credentials will be provided during setup\n" ++
+          "• Please allow 30-45 minutes for the setup process\n\n" ++
+          "If you have any questions about your equipment allocation, please contact the IT department.\n\n" ++
+          "Best regards,\n" ++
+          "IT Operations Team\n\n" ++
+          "---\n" ++
+          "Employee ID: " ++ vars.emailRequest.employeeId ++ "\n" ++
+          "Total Items: " ++ sizeOf(allocatedAssets) ++ "\n" ++
+          "Allocation Date: " ++ (now() as String {format: "MMM dd, yyyy"})
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        
+        <set-variable variableName="emailContent" value="#[payload]" doc:name="Set Email Content"/>
+        
+        <!-- Try to send email -->
+        <try doc:name="Try Send Asset Email" doc:id="s4e5n6d7-a8s9-s0e1-t2a3-l4l5o6c7a8t9">
+            <email:send doc:name="Send Asset Allocation Email" doc:id="s5e6n7d8-a9s0-s1e2-t3a4-l5l6o7c8a9t0" config-ref="Email_SMTP">
+                <email:to-addresses>
+                    <email:to-address value="#[vars.emailContent.to]"/>
+                </email:to-addresses>
+                <email:subject>#[vars.emailContent.subject]</email:subject>
+                <email:body>
+                    <email:content>#[vars.emailContent.body]</email:content>
+                </email:body>
+            </email:send>
+            <set-variable variableName="emailStatus" value="sent" doc:name="Set Email Status Success"/>
+            <set-variable variableName="emailError" value="" doc:name="Set No Error"/>
+            <error-handler>
+                <on-error-continue enableNotifications="true" logException="true" doc:name="On Asset Email Error">
+                    <set-variable variableName="emailStatus" value="failed" doc:name="Set Email Status Failed"/>
+                    <set-variable variableName="emailError" value="#[error.description default 'Unknown email error']" doc:name="Set Email Error"/>
+                    <logger level="WARN" doc:name="Log Asset Email Warning" message="Failed to send asset email to #[vars.emailRequest.email]: #[vars.emailError]"/>
+                </on-error-continue>
+            </error-handler>
+        </try>
+        
+        <!-- Log email attempt to database -->
+        <db:insert doc:name="Log Asset Email" doc:id="s6e7n8d9-a0s1-s2e3-t4a5-l6l7o8c9a0t1" config-ref="Database_Config">
+            <db:sql><![CDATA[INSERT INTO email_logs (employee_id, email_type, recipient_email, subject, message_body, status, error_message, sent_date) VALUES (:employeeId, :emailType, :recipient, :subject, :messageBody, :status, :error, NOW())]]></db:sql>
+            <db:input-parameters><![CDATA[{
+                "employeeId": vars.emailRequest.employeeId,
+                "emailType": "asset_allocation",
+                "recipient": vars.emailContent.to,
+                "subject": vars.emailContent.subject,
+                "messageBody": vars.emailContent.body,
+                "status": vars.emailStatus,
+                "error": vars.emailError
+            }]]></db:input-parameters>
+        </db:insert>
+        
+        <!-- Response -->
+        <ee:transform doc:name="Asset Email Response" doc:id="s7e8n9d0-a1s2-s3e4-t5a6-l7l8o9c0a1t2">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: vars.emailStatus == "sent",
+    message: if (vars.emailStatus == "sent") "Asset allocation email sent successfully" else "Asset allocation email failed to send",
+    emailDetails: {
+        recipient: vars.emailContent.to,
+        subject: vars.emailContent.subject,
+        status: vars.emailStatus,
+        error: vars.emailError,
+        timestamp: now()
+    }
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <!-- Send Completion Email -->
+    <flow name="send-completion-email" doc:id="s1e2n3d4-c5o6-m7p8-l9e0-t1i2o3n4e5m6">
+        <http:listener config-ref="Email_Notification_Listener_config" path="/email/sendCompletion" doc:name="Send Completion Email Listener" doc:id="s2e3n4d5-c6o7-m8p9-l0e1-t2i3o4n5e6m7"/>
+        <set-variable variableName="emailRequest" value="#[payload]" doc:name="Set Email Request"/>
+        <logger level="INFO" doc:name="Log Completion Email" message="Sending completion email to: #[vars.emailRequest.email]"/>
+        
+        <!-- Generate completion email content -->
+        <ee:transform doc:name="Generate Completion Email" doc:id="s3e4n5d6-c7o8-m9p0-l1e2-t3i4o5n6e7m8">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    to: vars.emailRequest.email,
+    subject: "Welcome Aboard! Your Onboarding is Complete - " ++ vars.emailRequest.firstName ++ " " ++ vars.emailRequest.lastName,
+    body: "Dear " ++ vars.emailRequest.firstName ++ ",\n\n" ++
+          "Congratulations! You have successfully completed your employee onboarding process.\n\n" ++
+          "✅ Onboarding Checklist Complete:\n" ++
+          "• Employee profile created\n" ++
+          "• IT equipment allocated and configured\n" ++
+          "• Security access credentials issued\n" ++
+          "• Department orientation scheduled\n" ++
+          "• Company policies and procedures reviewed\n\n" ++
+          "What's Next:\n" ++
+          "• Your manager will schedule your first team meeting\n" ++
+          "• You'll receive calendar invites for department meetings\n" ++
+          "• Training modules will be available in the learning portal\n" ++
+          "• Your HR representative will check in after your first week\n\n" ++
+          "Important Resources:\n" ++
+          "• Employee Handbook: Available on company intranet\n" ++
+          "• IT Support: ext. 4357 or it@company.com\n" ++
+          "• HR Support: ext. 2100 or hr@company.com\n" ++
+          "• Building Security: ext. 9111\n\n" ++
+          "We're excited to have you as part of our " ++ vars.emailRequest.department ++ " team! " ++
+          "If you have any questions as you settle into your new role, please don't hesitate to reach out.\n\n" ++
+          "Welcome to the team!\n\n" ++
+          "Best regards,\n" ++
+          "The " ++ vars.emailRequest.department ++ " Team & HR Department\n\n" ++
+          "---\n" ++
+          "Employee ID: " ++ vars.emailRequest.employeeId ++ "\n" ++
+          "Department: " ++ vars.emailRequest.department ++ "\n" ++
+          "Onboarding Completion: " ++ (now() as String {format: "MMM dd, yyyy 'at' HH:mm"})
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        
+        <set-variable variableName="emailContent" value="#[payload]" doc:name="Set Email Content"/>
+        
+        <!-- Try to send email -->
+        <try doc:name="Try Send Completion Email" doc:id="s4e5n6d7-c8o9-m0p1-l2e3-t4i5o6n7e8m9">
+            <email:send doc:name="Send Completion Email" doc:id="s5e6n7d8-c9o0-m1p2-l3e4-t5i6o7n8e9m0" config-ref="Email_SMTP">
+                <email:to-addresses>
+                    <email:to-address value="#[vars.emailContent.to]"/>
+                </email:to-addresses>
+                <email:subject>#[vars.emailContent.subject]</email:subject>
+                <email:body>
+                    <email:content>#[vars.emailContent.body]</email:content>
+                </email:body>
+            </email:send>
+            <set-variable variableName="emailStatus" value="sent" doc:name="Set Email Status Success"/>
+            <set-variable variableName="emailError" value="" doc:name="Set No Error"/>
+            <error-handler>
+                <on-error-continue enableNotifications="true" logException="true" doc:name="On Completion Email Error">
+                    <set-variable variableName="emailStatus" value="failed" doc:name="Set Email Status Failed"/>
+                    <set-variable variableName="emailError" value="#[error.description default 'Unknown email error']" doc:name="Set Email Error"/>
+                    <logger level="WARN" doc:name="Log Completion Email Warning" message="Failed to send completion email to #[vars.emailRequest.email]: #[vars.emailError]"/>
+                </on-error-continue>
+            </error-handler>
+        </try>
+        
+        <!-- Log email attempt to database -->
+        <db:insert doc:name="Log Completion Email" doc:id="s6e7n8d9-c0o1-m2p3-l4e5-t6i7o8n9e0m1" config-ref="Database_Config">
+            <db:sql><![CDATA[INSERT INTO email_logs (employee_id, email_type, recipient_email, subject, message_body, status, error_message, sent_date) VALUES (:employeeId, :emailType, :recipient, :subject, :messageBody, :status, :error, NOW())]]></db:sql>
+            <db:input-parameters><![CDATA[{
+                "employeeId": vars.emailRequest.employeeId,
+                "emailType": "onboarding_complete",
+                "recipient": vars.emailContent.to,
+                "subject": vars.emailContent.subject,
+                "messageBody": vars.emailContent.body,
+                "status": vars.emailStatus,
+                "error": vars.emailError
+            }]]></db:input-parameters>
+        </db:insert>
+        
+        <!-- Response -->
+        <ee:transform doc:name="Completion Email Response" doc:id="s7e8n9d0-c1o2-m3p4-l5e6-t7i8o9n0e1m2">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: vars.emailStatus == "sent",
+    message: if (vars.emailStatus == "sent") "Completion email sent successfully" else "Completion email failed to send",
+    emailDetails: {
+        recipient: vars.emailContent.to,
+        subject: vars.emailContent.subject,
+        status: vars.emailStatus,
+        error: vars.emailError,
+        timestamp: now()
+    }
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <!-- Get Employee Email Logs -->
+    <flow name="get-employee-email-logs" doc:id="g1e2t3e4-m5p6-l7o8-y9e0-e1e2m3a4i5l6">
+        <http:listener config-ref="Email_Notification_Listener_config" path="/email/logs/{employeeId}" doc:name="Get Employee Email Logs Listener" doc:id="g2e3t4e5-m6p7-l8o9-y0e1-e2e3m4a5i6l7"/>
+        <set-variable variableName="employeeId" value="#[attributes.uriParams.employeeId]" doc:name="Set Employee ID"/>
+        <db:select doc:name="Select Email Logs" doc:id="g3e4t5e6-m7p8-l9o0-y1e2-e3e4m5a6i7l8" config-ref="Database_Config">
+            <db:sql><![CDATA[SELECT * FROM email_logs WHERE employee_id = :employeeId ORDER BY sent_date DESC]]></db:sql>
+            <db:input-parameters><![CDATA[{
+                "employeeId": vars.employeeId
+            }]]></db:input-parameters>
+        </db:select>
+        <ee:transform doc:name="Email Logs Response" doc:id="g4e5t6e7-m8p9-l0o1-y2e3-e4e5m6a7i8l9">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    employeeId: vars.employeeId,
+    emailLogs: payload,
+    totalLogs: sizeOf(payload),
+    emailTypes: payload distinctBy $.EMAIL_TYPE pluck $.EMAIL_TYPE
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
     </flow>
 
 </mule>

@@ -14,29 +14,26 @@
                           http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
                           http://www.mulesoft.org/schema/mule/mcp http://www.mulesoft.org/schema/mule/mcp/current/mule-mcp.xsd">
 
-    <!-- HTTP Listener Configuration -->
+    <!-- Main HTTP Listener Configuration for CloudHub -->
     <http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config">
-        <http:listener-connection host="0.0.0.0" port="8081"/>
+        <http:listener-connection host="0.0.0.0" port="${http.port}"/>
     </http:listener-config>
 
-    <!-- Employee Onboarding HTTP Listener Configuration -->
+    <!-- All services consolidated on main port for CloudHub -->
     <http:listener-config name="Employee_Onboarding_Listener_config" doc:name="Employee Onboarding Listener config">
-        <http:listener-connection host="0.0.0.0" port="8082"/>
+        <http:listener-connection host="0.0.0.0" port="${http.port}"/>
     </http:listener-config>
 
-    <!-- Asset Allocation HTTP Listener Configuration -->
     <http:listener-config name="Asset_Allocation_Listener_config" doc:name="Asset Allocation Listener config">
-        <http:listener-connection host="0.0.0.0" port="8083"/>
+        <http:listener-connection host="0.0.0.0" port="${http.port}"/>
     </http:listener-config>
 
-    <!-- Email Notification HTTP Listener Configuration -->
     <http:listener-config name="Email_Notification_Listener_config" doc:name="Email Notification Listener config">
-        <http:listener-connection host="0.0.0.0" port="8084"/>
+        <http:listener-connection host="0.0.0.0" port="${http.port}"/>
     </http:listener-config>
 
-    <!-- Main Orchestration HTTP Listener Configuration -->
     <http:listener-config name="Main_Orchestration_Listener_config" doc:name="Main Orchestration Listener config">
-        <http:listener-connection host="0.0.0.0" port="8080"/>
+        <http:listener-connection host="0.0.0.0" port="${http.port}"/>
     </http:listener-config>
 
     <!-- HTTP Request Configuration for inter-service communication -->

@@ -36,16 +36,20 @@
                     <cloudHubDeployment>
                         <uri>https://anypoint.mulesoft.com</uri>
                         <muleVersion>${app.runtime}</muleVersion>
-                        <username>${username}</username>
-                        <password>${password}</password>
-                        <applicationName>${applicationName}</applicationName>
-                        <environment>${environment}</environment>
-                        <workerType>${workerType}</workerType>
-                        <workers>${workers}</workers>
+                        <clientId>${anypoint.client.id}</clientId>
+                        <clientSecret>${anypoint.client.secret}</clientSecret>
+                        <applicationName>${cloudhub.application.name}</applicationName>
+                        <environment>${cloudhub.environment}</environment>
+                        <region>${cloudhub.region}</region>
+                        <workerType>${cloudhub.worker.type}</workerType>
+                        <workers>${cloudhub.workers}</workers>
                         <objectStoreV2>true</objectStoreV2>
                         <persistentQueues>false</persistentQueues>
                         <properties>
-                            <app.environment>${environment}</app.environment>
+                            <app.port>8080</app.port>
+                            <email.smtp.host>smtp.gmail.com</email.smtp.host>
+                            <email.smtp.port>587</email.smtp.port>
+                            <groq.api.url>https://api.groq.com/openai/v1</groq.api.url>
                         </properties>
                     </cloudHubDeployment>
                 </configuration>

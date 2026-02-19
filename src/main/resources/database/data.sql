@@ -1,66 +1,73 @@
 -- Employee Onboarding System Sample Data
--- Insert sample data for testing and demo purposes
+-- Sample data for demonstration and testing
 
--- Sample employees
-INSERT INTO employees (employee_id, first_name, last_name, email, department, position, status, start_date, created_date) VALUES
-('EMP001', 'John', 'Smith', 'john.smith@company.com', 'Engineering', 'Software Engineer', 'active', '2024-01-15', CURRENT_TIMESTAMP),
-('EMP002', 'Sarah', 'Johnson', 'sarah.johnson@company.com', 'HR', 'HR Manager', 'active', '2024-01-10', CURRENT_TIMESTAMP),
-('EMP003', 'Mike', 'Davis', 'mike.davis@company.com', 'Finance', 'Financial Analyst', 'onboarding', '2024-02-01', CURRENT_TIMESTAMP),
-('EMP004', 'Lisa', 'Wilson', 'lisa.wilson@company.com', 'Marketing', 'Marketing Specialist', 'onboarding', '2024-02-15', CURRENT_TIMESTAMP),
-('EMP005', 'David', 'Brown', 'david.brown@company.com', 'Operations', 'Operations Manager', 'active', '2023-12-01', CURRENT_TIMESTAMP);
+-- Insert sample employees
+INSERT INTO employees (employee_id, first_name, last_name, email, department, position, start_date, status) VALUES
+('EMP001', 'John', 'Doe', 'john.doe@company.com', 'IT', 'Software Engineer', '2024-01-15', 'active'),
+('EMP002', 'Jane', 'Smith', 'jane.smith@company.com', 'HR', 'HR Specialist', '2024-01-20', 'active'),
+('EMP003', 'Mike', 'Johnson', 'mike.johnson@company.com', 'Finance', 'Financial Analyst', '2024-02-01', 'active'),
+('EMP004', 'Sarah', 'Wilson', 'sarah.wilson@company.com', 'Marketing', 'Marketing Manager', '2024-02-10', 'onboarding');
 
--- Sample assets inventory
-INSERT INTO assets (asset_id, asset_type, brand, model, serial_number, status, specs, created_date) VALUES
--- Laptops
-('LAP001', 'laptop', 'Dell', 'Latitude 5520', 'DL001234567', 'AVAILABLE', 'Intel i7, 16GB RAM, 512GB SSD', CURRENT_TIMESTAMP),
-('LAP002', 'laptop', 'HP', 'EliteBook 850', 'HP001234567', 'ALLOCATED', 'Intel i7, 16GB RAM, 1TB SSD', CURRENT_TIMESTAMP),
-('LAP003', 'laptop', 'Lenovo', 'ThinkPad T14', 'LN001234567', 'AVAILABLE', 'Intel i5, 8GB RAM, 256GB SSD', CURRENT_TIMESTAMP),
-('LAP004', 'laptop', 'Apple', 'MacBook Pro 14"', 'AP001234567', 'ALLOCATED', 'M2 Pro, 16GB RAM, 512GB SSD', CURRENT_TIMESTAMP),
-('LAP005', 'laptop', 'Dell', 'XPS 13', 'DL002234567', 'AVAILABLE', 'Intel i7, 16GB RAM, 512GB SSD', CURRENT_TIMESTAMP),
+-- Insert sample assets
+INSERT INTO assets (asset_id, asset_type, asset_name, description, status, serial_number, location) VALUES
+-- Available laptops
+('LAPTOP001', 'laptop', 'Dell Latitude 5520', 'Business laptop with 16GB RAM, 512GB SSD', 'available', 'DL5520001', 'IT Storage Room'),
+('LAPTOP002', 'laptop', 'Dell Latitude 5520', 'Business laptop with 16GB RAM, 512GB SSD', 'available', 'DL5520002', 'IT Storage Room'),
+('LAPTOP003', 'laptop', 'MacBook Pro 14"', 'Apple MacBook Pro with M2 chip, 16GB RAM, 512GB SSD', 'available', 'MBP14001', 'IT Storage Room'),
+('LAPTOP004', 'laptop', 'ThinkPad X1 Carbon', 'Lenovo ThinkPad with 16GB RAM, 1TB SSD', 'available', 'TPX1001', 'IT Storage Room'),
+('LAPTOP005', 'laptop', 'Dell XPS 13', 'Ultrabook with 16GB RAM, 512GB SSD', 'available', 'DXPS13001', 'IT Storage Room'),
 
--- Monitors
-('MON001', 'monitor', 'Samsung', '27" 4K Monitor', 'SM001234567', 'AVAILABLE', '27 inch, 4K UHD, USB-C', CURRENT_TIMESTAMP),
-('MON002', 'monitor', 'LG', '24" UltraWide', 'LG001234567', 'ALLOCATED', '24 inch, 1440p, IPS Panel', CURRENT_TIMESTAMP),
-('MON003', 'monitor', 'Dell', '32" 4K Monitor', 'DL003234567', 'AVAILABLE', '32 inch, 4K UHD, Type-C Hub', CURRENT_TIMESTAMP),
+-- Available phones
+('PHONE001', 'phone', 'iPhone 14 Pro', 'Apple iPhone 14 Pro 256GB', 'available', 'IPH14P001', 'IT Storage Room'),
+('PHONE002', 'phone', 'iPhone 14 Pro', 'Apple iPhone 14 Pro 256GB', 'available', 'IPH14P002', 'IT Storage Room'),
+('PHONE003', 'phone', 'Samsung Galaxy S23', 'Samsung Galaxy S23 256GB', 'available', 'SGS23001', 'IT Storage Room'),
+('PHONE004', 'phone', 'Google Pixel 7 Pro', 'Google Pixel 7 Pro 256GB', 'available', 'GPP7001', 'IT Storage Room'),
 
--- Phones
-('PHN001', 'phone', 'Apple', 'iPhone 15', 'AP002234567', 'AVAILABLE', '128GB, Blue', CURRENT_TIMESTAMP),
-('PHN002', 'phone', 'Samsung', 'Galaxy S24', 'SM002234567', 'ALLOCATED', '256GB, Black', CURRENT_TIMESTAMP),
-('PHN003', 'phone', 'Apple', 'iPhone 15 Pro', 'AP003234567', 'AVAILABLE', '256GB, Space Gray', CURRENT_TIMESTAMP),
+-- Available security badges
+('BADGE001', 'security_badge', 'Employee ID Badge', 'Standard employee identification badge with building access', 'available', 'BDG001', 'Security Office'),
+('BADGE002', 'security_badge', 'Employee ID Badge', 'Standard employee identification badge with building access', 'available', 'BDG002', 'Security Office'),
+('BADGE003', 'security_badge', 'Employee ID Badge', 'Standard employee identification badge with building access', 'available', 'BDG003', 'Security Office'),
+('BADGE004', 'security_badge', 'Employee ID Badge', 'Standard employee identification badge with building access', 'available', 'BDG004', 'Security Office'),
+('BADGE005', 'security_badge', 'Employee ID Badge', 'Standard employee identification badge with building access', 'available', 'BDG005', 'Security Office'),
 
--- ID Cards
-('IDC001', 'id_card', 'Company', 'Employee ID Card', 'IDC001234567', 'AVAILABLE', 'RFID enabled, Photo ID', CURRENT_TIMESTAMP),
-('IDC002', 'id_card', 'Company', 'Employee ID Card', 'IDC002234567', 'ALLOCATED', 'RFID enabled, Photo ID', CURRENT_TIMESTAMP),
-('IDC003', 'id_card', 'Company', 'Employee ID Card', 'IDC003234567', 'AVAILABLE', 'RFID enabled, Photo ID', CURRENT_TIMESTAMP),
+-- Available monitors
+('MONITOR001', 'monitor', 'Dell UltraSharp 24"', '24-inch 4K monitor with USB-C connectivity', 'available', 'DU24001', 'IT Storage Room'),
+('MONITOR002', 'monitor', 'Dell UltraSharp 27"', '27-inch 4K monitor with USB-C connectivity', 'available', 'DU27001', 'IT Storage Room'),
+('MONITOR003', 'monitor', 'LG UltraWide 34"', '34-inch ultrawide monitor for productivity', 'available', 'LGUW34001', 'IT Storage Room'),
 
--- Access Cards
-('ACC001', 'access_card', 'Company', 'Building Access Card', 'ACC001234567', 'AVAILABLE', 'Proximity card, All floors access', CURRENT_TIMESTAMP),
-('ACC002', 'access_card', 'Company', 'Building Access Card', 'ACC002234567', 'ALLOCATED', 'Proximity card, Engineering floor access', CURRENT_TIMESTAMP),
+-- Available keyboards and mice
+('KEYBOARD001', 'keyboard', 'Logitech MX Keys', 'Wireless illuminated keyboard', 'available', 'LMXK001', 'IT Storage Room'),
+('KEYBOARD002', 'keyboard', 'Apple Magic Keyboard', 'Wireless keyboard for Mac', 'available', 'AMK001', 'IT Storage Room'),
+('MOUSE001', 'mouse', 'Logitech MX Master 3', 'Advanced wireless mouse', 'available', 'LMXM3001', 'IT Storage Room'),
+('MOUSE002', 'mouse', 'Apple Magic Mouse', 'Wireless mouse for Mac', 'available', 'AMM001', 'IT Storage Room'),
 
--- Keyboards and Mouse
-('KEY001', 'keyboard', 'Logitech', 'MX Keys', 'LG003234567', 'AVAILABLE', 'Wireless, Backlit, Multi-device', CURRENT_TIMESTAMP),
-('KEY002', 'keyboard', 'Apple', 'Magic Keyboard', 'AP004234567', 'ALLOCATED', 'Wireless, Touch ID, Space Gray', CURRENT_TIMESTAMP),
-('MOU001', 'mouse', 'Logitech', 'MX Master 3', 'LG004234567', 'AVAILABLE', 'Wireless, Precision scroll, Multi-device', CURRENT_TIMESTAMP),
-('MOU002', 'mouse', 'Apple', 'Magic Mouse', 'AP005234567', 'ALLOCATED', 'Wireless, Multi-touch, Space Gray', CURRENT_TIMESTAMP);
+-- Some assigned assets
+('LAPTOP101', 'laptop', 'Dell Latitude 5520', 'Business laptop with 16GB RAM, 512GB SSD', 'assigned', 'DL5520101', 'John Doe Desk'),
+('PHONE101', 'phone', 'iPhone 14 Pro', 'Apple iPhone 14 Pro 256GB', 'assigned', 'IPH14P101', 'John Doe'),
+('BADGE101', 'security_badge', 'Employee ID Badge', 'Employee identification badge', 'assigned', 'BDG101', 'John Doe');
 
--- Update allocated assets with employee assignments
-UPDATE assets SET allocated_to = 'EMP001', allocated_date = CURRENT_TIMESTAMP WHERE asset_id IN ('LAP002', 'MON002', 'PHN002', 'IDC002', 'ACC002', 'KEY002', 'MOU002');
-UPDATE assets SET allocated_to = 'EMP002', allocated_date = CURRENT_TIMESTAMP WHERE asset_id = 'LAP004';
+-- Update assigned assets with employee assignments
+UPDATE assets SET assigned_to = 'EMP001', assigned_date = '2024-01-15 10:00:00' WHERE asset_id IN ('LAPTOP101', 'PHONE101', 'BADGE101');
 
--- Sample email logs
-INSERT INTO email_logs (employee_id, email_type, recipient, subject, sent_date, status) VALUES
-('EMP001', 'WELCOME', 'john.smith@company.com', 'Welcome to Engineering Department - John Smith', DATEADD('DAY', -15, CURRENT_TIMESTAMP), 'SENT'),
-('EMP001', 'ASSET_ALLOCATION', 'john.smith@company.com', 'Assets Allocated - John Smith', DATEADD('DAY', -14, CURRENT_TIMESTAMP), 'SENT'),
-('EMP001', 'COMPLETION', 'john.smith@company.com', 'Onboarding Complete - Welcome to the Team, John!', DATEADD('DAY', -10, CURRENT_TIMESTAMP), 'SENT'),
+-- Insert sample email logs
+INSERT INTO email_logs (employee_id, email_type, recipient_email, subject, message_body, status, sent_date) VALUES
+('EMP001', 'welcome', 'john.doe@company.com', 'Welcome to the Company!', 'Welcome John! We are excited to have you join our IT team.', 'sent', '2024-01-15 09:00:00'),
+('EMP001', 'asset_allocation', 'john.doe@company.com', 'Your IT Equipment Assignment', 'Your laptop, phone, and security badge have been assigned and are ready for pickup.', 'sent', '2024-01-15 10:30:00'),
+('EMP001', 'onboarding_complete', 'john.doe@company.com', 'Onboarding Process Complete', 'Congratulations! Your onboarding process has been completed successfully.', 'sent', '2024-01-15 16:00:00'),
 
-('EMP002', 'WELCOME', 'sarah.johnson@company.com', 'Welcome to HR Department - Sarah Johnson', DATEADD('DAY', -20, CURRENT_TIMESTAMP), 'SENT'),
-('EMP002', 'ASSET_ALLOCATION', 'sarah.johnson@company.com', 'Assets Allocated - Sarah Johnson', DATEADD('DAY', -19, CURRENT_TIMESTAMP), 'SENT'),
-('EMP002', 'COMPLETION', 'sarah.johnson@company.com', 'Onboarding Complete - Welcome to the Team, Sarah!', DATEADD('DAY', -15, CURRENT_TIMESTAMP), 'SENT'),
+('EMP002', 'welcome', 'jane.smith@company.com', 'Welcome to the Company!', 'Welcome Jane! We are thrilled to have you join our HR team.', 'sent', '2024-01-20 09:00:00'),
+('EMP002', 'asset_allocation', 'jane.smith@company.com', 'Your IT Equipment Assignment', 'Your laptop and security badge have been assigned and are ready for pickup.', 'sent', '2024-01-20 10:30:00'),
 
-('EMP003', 'WELCOME', 'mike.davis@company.com', 'Welcome to Finance Department - Mike Davis', DATEADD('DAY', -17, CURRENT_TIMESTAMP), 'SENT'),
-('EMP003', 'ASSET_ALLOCATION', 'mike.davis@company.com', 'Assets Allocated - Mike Davis', DATEADD('DAY', -16, CURRENT_TIMESTAMP), 'SENT'),
+('EMP003', 'welcome', 'mike.johnson@company.com', 'Welcome to the Company!', 'Welcome Mike! We look forward to having you on our Finance team.', 'sent', '2024-02-01 09:00:00'),
 
-('EMP004', 'WELCOME', 'lisa.wilson@company.com', 'Welcome to Marketing Department - Lisa Wilson', DATEADD('DAY', -3, CURRENT_TIMESTAMP), 'SENT'),
+('EMP004', 'welcome', 'sarah.wilson@company.com', 'Welcome to the Company!', 'Welcome Sarah! We are excited to have you join our Marketing team.', 'sent', '2024-02-10 09:00:00'),
 
-('EMP005', 'WELCOME', 'david.brown@company.com', 'Welcome to Operations Department - David Brown', DATEADD('DAY', -80, CURRENT_TIMESTAMP), 'SENT'),
-('EMP005', 'COMPLETION', 'david.brown@company.com', 'Onboarding Complete - Welcome to the Team, David!', DATEADD('DAY', -75, CURRENT_TIMESTAMP), 'SENT');
+-- System notification logs
+(NULL, 'system', 'admin@company.com', 'Database Initialized', 'Employee Onboarding System database has been initialized with sample data.', 'sent', CURRENT_TIMESTAMP),
+(NULL, 'system', 'it@company.com', 'Asset Inventory Updated', 'Asset inventory has been loaded with available laptops, phones, badges, and accessories.', 'sent', CURRENT_TIMESTAMP);
+
+-- Insert onboarding task updates
+UPDATE employees SET onboarding_tasks = '{"tasks":[{"task":"Complete IT setup","status":"completed"},{"task":"Security briefing","status":"completed"},{"task":"Department orientation","status":"completed"}]}' WHERE employee_id = 'EMP001';
+UPDATE employees SET onboarding_tasks = '{"tasks":[{"task":"Complete IT setup","status":"completed"},{"task":"HR documentation","status":"completed"},{"task":"Department orientation","status":"in_progress"}]}' WHERE employee_id = 'EMP002';
+UPDATE employees SET onboarding_tasks = '{"tasks":[{"task":"Complete IT setup","status":"completed"},{"task":"Financial systems access","status":"in_progress"}]}' WHERE employee_id = 'EMP003';
+UPDATE employees SET onboarding_tasks = '{"tasks":[{"task":"Complete IT setup","status":"pending"},{"task":"Marketing tools training","status":"pending"}]}' WHERE employee_id = 'EMP004';
