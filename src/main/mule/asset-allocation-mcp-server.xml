@@ -4,265 +4,342 @@
       xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
       xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" 
       xmlns:http="http://www.mulesoft.org/schema/mule/http" 
-      xmlns:mcp="http://www.mulesoft.org/schema/mule/mcp" 
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
       xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd 
                           http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
                           http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
-                          http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
-                          http://www.mulesoft.org/schema/mule/mcp http://www.mulesoft.org/schema/mule/mcp/current/mule-mcp.xsd">
+                          http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
 
     <!-- Asset Allocation MCP Server Flows -->
     
-    <flow name="initialize-asset-inventory" doc:id="e5f6g7h8-i9j0-k1l2-m3n4-o5p6q7r8s9t0">
-        <http:listener config-ref="Asset_Allocation_Listener_config" path="/initializeAssets" doc:name="Initialize Assets HTTP Listener" doc:id="j5k6l7m8-n9o0-p1q2-r3s4-t5u6v7w8x9y0"/>
-        <ee:transform doc:name="Create Asset Data" doc:id="o5p6q7r8-s9t0-u1v2-w3x4-y5z6a7b8c9d0">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
+    <flow name="allocate-asset" doc:id="a1s2s3e4-t5a6-l7l8-o9c0-a1t2i3o4n5a6">
+        <http:listener config-ref="Asset_Allocation_Listener_config" path="/mcp/tools/allocate-asset" doc:name="Allocate Asset Listener" doc:id="a2s3s4e5-t6a7-l8l9-o0c1-a2t3i4o5n6a7" allowedMethods="POST"/>
+        <set-variable variableName="assetRequest" value="#[payload]" doc:name="Set Asset Request"/>
+        <logger level="INFO" doc:name="Log Asset Request" message="Processing asset allocation request: #[vars.assetRequest]"/>
+        
+        <!-- Check Available Assets -->
+        <db:select doc:name="Check Available Assets" doc:id="a3s4s5e6-t7a8-l9l0-o1c2-a3t4i5o6n7a8" config-ref="Database_Config">
+            <db:sql><![CDATA[
+                SELECT * FROM assets 
+                WHERE asset_type = :assetType 
+                AND status = 'AVAILABLE' 
+                ORDER BY created_date ASC 
+                LIMIT 1
+            ]]></db:sql>
+            <db:input-parameters><![CDATA[
+                {
+                    "assetType": vars.assetRequest.assetType
+                }
+            ]]></db:input-parameters>
+        </db:select>
+        
+        <choice doc:name="Asset Available?" doc:id="a4s5s6e7-t8a9-l0l1-o2c3-a4t5i6o7n8a9">
+            <when expression="#[payload != []]">
+                <!-- Allocate Asset -->
+                <set-variable variableName="availableAsset" value="#[payload[0]]" doc:name="Set Available Asset"/>
+                <db:update doc:name="Allocate Asset" doc:id="a5s6s7e8-t9a0-l1l2-o3c4-a5t6i7o8n9a0" config-ref="Database_Config">
+                    <db:sql><![CDATA[
+                        UPDATE assets 
+                        SET status = 'ALLOCATED', 
+                            assigned_to = :employeeId,
+                            allocated_date = CURRENT_TIMESTAMP,
+                            updated_date = CURRENT_TIMESTAMP
+                        WHERE asset_id = :assetId
+                    ]]></db:sql>
+                    <db:input-parameters><![CDATA[
+                        {
+                            "employeeId": vars.assetRequest.employeeId,
+                            "assetId": vars.availableAsset.asset_id
+                        }
+                    ]]></db:input-parameters>
+                </db:update>
+                
+                <!-- Log Asset Allocation -->
+                <db:insert doc:name="Log Asset Allocation" doc:id="a6s7s8e9-t0a1-l2l3-o4c5-a6t7i8o9n0a1" config-ref="Database_Config">
+                    <db:sql><![CDATA[
+                        INSERT INTO asset_history (
+                            asset_id, 
+                            employee_id, 
+                            action, 
+                            action_date, 
+                            notes
+                        ) VALUES (
+                            :assetId,
+                            :employeeId,
+                            'ALLOCATED',
+                            CURRENT_TIMESTAMP,
+                            :notes
+                        )
+                    ]]></db:sql>
+                    <db:input-parameters><![CDATA[
+                        {
+                            "assetId": vars.availableAsset.asset_id,
+                            "employeeId": vars.assetRequest.employeeId,
+                            "notes": "Asset allocated via MCP request - Priority: " ++ (vars.assetRequest.priority default "normal")
+                        }
+                    ]]></db:input-parameters>
+                </db:insert>
+                
+                <ee:transform doc:name="Success Response" doc:id="a7s8s9e0-t1a2-l3l4-o5c6-a7t8i9o0n1a2">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-[
-    {
-        "assetId": "LAP001",
-        "assetType": "laptop",
-        "brand": "Dell",
-        "model": "Latitude 5520",
-        "serialNumber": "DL001234567",
-        "status": "AVAILABLE",
-        "specs": "Intel i7, 16GB RAM, 512GB SSD"
-    },
-    {
-        "assetId": "LAP002",
-        "assetType": "laptop",
-        "brand": "HP",
-        "model": "EliteBook 850",
-        "serialNumber": "HP001234567",
-        "status": "AVAILABLE",
-        "specs": "Intel i7, 16GB RAM, 1TB SSD"
-    },
-    {
-        "assetId": "MON001",
-        "assetType": "monitor",
-        "brand": "Samsung",
-        "model": "27 4K Monitor",
-        "serialNumber": "SM001234567",
-        "status": "AVAILABLE",
-        "specs": "27 inch, 4K UHD, USB-C"
-    },
-    {
-        "assetId": "PHN001",
-        "assetType": "phone",
-        "brand": "Apple",
-        "model": "iPhone 15",
-        "serialNumber": "AP001234567",
-        "status": "AVAILABLE",
-        "specs": "128GB, Blue"
-    },
-    {
-        "assetId": "IDC001",
-        "assetType": "id_card",
-        "brand": "Company",
-        "model": "Employee ID Card",
-        "serialNumber": "IDC001234567",
-        "status": "AVAILABLE",
-        "specs": "RFID enabled, Photo ID"
+{
+    success: true,
+    message: "Asset allocated successfully",
+    allocation: {
+        assetId: vars.availableAsset.asset_id,
+        assetType: vars.availableAsset.asset_type,
+        assetModel: vars.availableAsset.model,
+        serialNumber: vars.availableAsset.serial_number,
+        employeeId: vars.assetRequest.employeeId,
+        allocatedDate: now() as String,
+        status: "ALLOCATED",
+        trackingId: "AST-" ++ (now() as String {format: "yyyyMMddHHmmss"})
     }
-]]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-        <foreach doc:name="For Each Asset" doc:id="t5u6v7w8-x9y0-z1a2-b3c4-d5e6f7g8h9i0">
-            <db:insert doc:name="Insert Asset" doc:id="y5z6a7b8-c9d0-e1f2-g3h4-i5j6k7l8m9n0" config-ref="Database_Config">
-                <db:sql><![CDATA[INSERT INTO assets (asset_id, asset_type, brand, model, serial_number, status, specs, created_date) 
-                                 VALUES (:assetId, :assetType, :brand, :model, :serialNumber, :status, :specs, NOW())
-                                 ON DUPLICATE KEY UPDATE status = :status]]></db:sql>
-                <db:input-parameters><![CDATA[
-                    {
-                        "assetId": "#[payload.assetId]",
-                        "assetType": "#[payload.assetType]",
-                        "brand": "#[payload.brand]",
-                        "model": "#[payload.model]",
-                        "serialNumber": "#[payload.serialNumber]",
-                        "status": "#[payload.status]",
-                        "specs": "#[payload.specs]"
-                    }
-                ]]></db:input-parameters>
-            </db:insert>
-        </foreach>
-        <ee:transform doc:name="Transform Response" doc:id="d6e7f8g9-h0i1-j2k3-l4m5-n6o7p8q9r0s1">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+            <otherwise>
+                <ee:transform doc:name="No Assets Available" doc:id="a8s9s0e1-t2a3-l4l5-o6c7-a8t9i0o1n2a3">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
-    success: true,
-    message: "Asset inventory initialized successfully",
-    assetsCreated: sizeOf(vars.originalPayload),
-    timestamp: now()
+    success: false,
+    message: "No available assets of type: " ++ vars.assetRequest.assetType,
+    error: "ASSET_UNAVAILABLE",
+    assetType: vars.assetRequest.assetType,
+    suggestion: "Consider requesting alternative equipment or check availability later"
 }]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </otherwise>
+        </choice>
     </flow>
 
-    <flow name="allocate-assets-to-employee" doc:id="f6g7h8i9-j0k1-l2m3-n4o5-p6q7r8s9t0u1">
-        <http:listener config-ref="Asset_Allocation_Listener_config" path="/allocateAssets" doc:name="Allocate Assets HTTP Listener" doc:id="k6l7m8n9-o0p1-q2r3-s4t5-u6v7w8x9y0z1"/>
-        <set-variable variableName="allocationPayload" value="#[payload]" doc:name="Set Allocation Payload"/>
-        <mcp:call-tool doc:name="Call Asset Allocation Tool" doc:id="p6q7r8s9-t0u1-v2w3-x4y5-z6a7b8c9d0e1" config-ref="Asset_MCP_Config" toolName="allocateAssetsTool">
-            <mcp:input><![CDATA[
-                {
-                    "employeeId": "#[vars.allocationPayload.employeeId]",
-                    "assetTypes": "#[vars.allocationPayload.assetTypes]"
-                }
-            ]]></mcp:input>
-        </mcp:call-tool>
-        <!-- Get available assets for each type requested -->
-        <db:select doc:name="Select Available Assets" doc:id="u6v7w8x9-y0z1-a2b3-c4d5-e6f7g8h9i0j1" config-ref="Database_Config">
-            <db:sql><![CDATA[SELECT * FROM assets WHERE asset_type IN (:assetTypes) AND status = 'AVAILABLE' 
-                             ORDER BY asset_type, created_date ASC]]></db:sql>
+    <flow name="get-asset-inventory" doc:id="b1s2s3e4-t5a6-l7l8-o9c0-b1t2i3o4n5a6">
+        <http:listener config-ref="Asset_Allocation_Listener_config" path="/mcp/tools/get-inventory" doc:name="Get Inventory Listener" doc:id="b2s3s4e5-t6a7-l8l9-o0c1-b2t3i4o5n6a7" allowedMethods="GET"/>
+        <set-variable variableName="assetType" value="#[attributes.queryParams.assetType]" doc:name="Set Asset Type Filter"/>
+        
+        <db:select doc:name="Get Asset Inventory" doc:id="b3s4s5e6-t7a8-l9l0-o1c2-b3t4i5o6n7a8" config-ref="Database_Config">
+            <db:sql><![CDATA[
+                SELECT 
+                    asset_type,
+                    status,
+                    COUNT(*) as count,
+                    AVG(CASE WHEN status = 'AVAILABLE' THEN 1 ELSE 0 END) * 100 as availability_percentage
+                FROM assets 
+                WHERE (:assetType IS NULL OR asset_type = :assetType)
+                GROUP BY asset_type, status
+                ORDER BY asset_type, status
+            ]]></db:sql>
             <db:input-parameters><![CDATA[
                 {
-                    "assetTypes": "#[vars.allocationPayload.assetTypes joinBy ',']"
+                    "assetType": vars.assetType
                 }
             ]]></db:input-parameters>
         </db:select>
-        <ee:transform doc:name="Process Asset Allocation" doc:id="z6a7b8c9-d0e1-f2g3-h4i5-j6k7l8m9n0o1">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
-var availableAssets = payload
-var requestedTypes = vars.allocationPayload.assetTypes
-var allocatedAssets = requestedTypes map (assetType) -> (
-    availableAssets filter (asset) -> asset.asset_type == assetType
-)[0] default null
----
-{
-    employeeId: vars.allocationPayload.employeeId,
-    allocatedAssets: allocatedAssets filter ($ != null),
-    requestedTypes: requestedTypes,
-    allocationDate: now()
-}]]></ee:set-payload>
-            </ee:message>
-            <ee:variables>
-                <ee:set-variable variableName="allocatedAssets"><![CDATA[%dw 2.0
-output application/json
-var availableAssets = payload
-var requestedTypes = vars.allocationPayload.assetTypes
----
-requestedTypes map (assetType) -> (
-    availableAssets filter (asset) -> asset.asset_type == assetType
-)[0] default null filter ($ != null)]]></ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <!-- Update asset status to ALLOCATED -->
-        <foreach doc:name="For Each Allocated Asset" doc:id="e7f8g9h0-i1j2-k3l4-m5n6-o7p8q9r0s1t2">
-            <db:update doc:name="Update Asset Status" doc:id="j7k8l9m0-n1o2-p3q4-r5s6-t7u8v9w0x1y2" config-ref="Database_Config">
-                <db:sql><![CDATA[UPDATE assets SET status = 'ALLOCATED', allocated_to = :employeeId, 
-                                 allocated_date = NOW() WHERE asset_id = :assetId]]></db:sql>
-                <db:input-parameters><![CDATA[
-                    {
-                        "employeeId": "#[vars.allocationPayload.employeeId]",
-                        "assetId": "#[payload.asset_id]"
-                    }
-                ]]></db:input-parameters>
-            </db:update>
-        </foreach>
-        <ee:transform doc:name="Transform Final Response" doc:id="o8p9q0r1-s2t3-u4v5-w6x7-y8z9a0b1c2d3">
+        
+        <ee:transform doc:name="Transform Inventory Response" doc:id="b4s5s6e7-t8a9-l0l1-o2c3-b4t5i6o7n8a9">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
     success: true,
-    message: "Assets allocated successfully",
-    employeeId: vars.allocationPayload.employeeId,
-    allocatedAssets: vars.allocatedAssets,
-    allocationId: "ALLOC" ++ (now() as String {format: "yyyyMMddHHmmss"}),
-    timestamp: now()
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-    </flow>
-
-    <flow name="get-asset-inventory" doc:id="g7h8i9j0-k1l2-m3n4-o5p6-q7r8s9t0u1v2">
-        <http:listener config-ref="Asset_Allocation_Listener_config" path="/getInventory" doc:name="Get Inventory HTTP Listener" doc:id="l7m8n9o0-p1q2-r3s4-t5u6-v7w8x9y0z1a2"/>
-        <db:select doc:name="Select All Assets" doc:id="q7r8s9t0-u1v2-w3x4-y5z6-a7b8c9d0e1f2" config-ref="Database_Config">
-            <db:sql><![CDATA[SELECT * FROM assets ORDER BY asset_type, status, created_date]]></db:sql>
-        </db:select>
-        <ee:transform doc:name="Transform Response" doc:id="v8w9x0y1-z2a3-b4c5-d6e7-f8g9h0i1j2k3">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-    success: true,
-    inventory: payload,
+    inventory: payload groupBy $.asset_type mapObject ((statusGroup, assetType) -> {
+        (assetType): {
+            assetType: assetType,
+            totalAssets: sum(statusGroup.*count),
+            statusBreakdown: statusGroup map {
+                status: $.status,
+                count: $.count,
+                percentage: round(($.count / sum(statusGroup.*count)) * 100)
+            },
+            availableCount: sum(statusGroup filter ($.status == "AVAILABLE") map $.count),
+            allocatedCount: sum(statusGroup filter ($.status == "ALLOCATED") map $.count),
+            maintenanceCount: sum(statusGroup filter ($.status == "MAINTENANCE") map $.count)
+        }
+    }),
     summary: {
-        totalAssets: sizeOf(payload),
-        availableAssets: sizeOf(payload filter ($.status == "AVAILABLE")),
-        allocatedAssets: sizeOf(payload filter ($.status == "ALLOCATED")),
-        maintenanceAssets: sizeOf(payload filter ($.status == "MAINTENANCE"))
-    },
-    timestamp: now()
+        totalAssetTypes: sizeOf(payload groupBy $.asset_type),
+        overallAvailable: sum(payload filter ($.status == "AVAILABLE") map $.count),
+        overallAllocated: sum(payload filter ($.status == "ALLOCATED") map $.count),
+        timestamp: now() as String
+    }
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
     </flow>
 
-    <flow name="get-employee-assets" doc:id="h8i9j0k1-l2m3-n4o5-p6q7-r8s9t0u1v2w3">
-        <http:listener config-ref="Asset_Allocation_Listener_config" path="/getEmployeeAssets/{employeeId}" doc:name="Get Employee Assets HTTP Listener" doc:id="m8n9o0p1-q2r3-s4t5-u6v7-w8x9y0z1a2b3"/>
-        <set-variable variableName="employeeId" value="#[attributes.uriParams.employeeId]" doc:name="Set Employee ID"/>
-        <db:select doc:name="Select Employee Assets" doc:id="r8s9t0u1-v2w3-x4y5-z6a7-b8c9d0e1f2g3" config-ref="Database_Config">
-            <db:sql><![CDATA[SELECT * FROM assets WHERE allocated_to = :employeeId AND status = 'ALLOCATED']]></db:sql>
+    <flow name="return-asset" doc:id="c1s2s3e4-t5a6-l7l8-o9c0-c1t2i3o4n5a6">
+        <http:listener config-ref="Asset_Allocation_Listener_config" path="/mcp/tools/return-asset" doc:name="Return Asset Listener" doc:id="c2s3s4e5-t6a7-l8l9-o0c1-c2t3i4o5n6a7" allowedMethods="POST"/>
+        <set-variable variableName="returnRequest" value="#[payload]" doc:name="Set Return Request"/>
+        
+        <!-- Verify Asset Assignment -->
+        <db:select doc:name="Verify Asset Assignment" doc:id="c3s4s5e6-t7a8-l9l0-o1c2-c3t4i5o6n7a8" config-ref="Database_Config">
+            <db:sql><![CDATA[
+                SELECT * FROM assets 
+                WHERE asset_id = :assetId 
+                AND assigned_to = :employeeId 
+                AND status = 'ALLOCATED'
+            ]]></db:sql>
             <db:input-parameters><![CDATA[
                 {
-                    "employeeId": "#[vars.employeeId]"
+                    "assetId": vars.returnRequest.assetId,
+                    "employeeId": vars.returnRequest.employeeId
                 }
             ]]></db:input-parameters>
         </db:select>
-        <ee:transform doc:name="Transform Response" doc:id="w9x0y1z2-a3b4-c5d6-e7f8-g9h0i1j2k3l4">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-    success: true,
-    employeeId: vars.employeeId,
-    allocatedAssets: payload,
-    assetCount: sizeOf(payload),
-    timestamp: now()
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-    </flow>
-
-    <flow name="return-asset" doc:id="i9j0k1l2-m3n4-o5p6-q7r8-s9t0u1v2w3x4">
-        <http:listener config-ref="Asset_Allocation_Listener_config" path="/returnAsset" doc:name="Return Asset HTTP Listener" doc:id="n9o0p1q2-r3s4-t5u6-v7w8-x9y0z1a2b3c4"/>
-        <set-variable variableName="returnPayload" value="#[payload]" doc:name="Set Return Payload"/>
-        <db:update doc:name="Return Asset to Inventory" doc:id="s9t0u1v2-w3x4-y5z6-a7b8-c9d0e1f2g3h4" config-ref="Database_Config">
-            <db:sql><![CDATA[UPDATE assets SET status = 'AVAILABLE', allocated_to = NULL, 
-                             allocated_date = NULL, returned_date = NOW() 
-                             WHERE asset_id = :assetId AND allocated_to = :employeeId]]></db:sql>
-            <db:input-parameters><![CDATA[
-                {
-                    "assetId": "#[vars.returnPayload.assetId]",
-                    "employeeId": "#[vars.returnPayload.employeeId]"
-                }
-            ]]></db:input-parameters>
-        </db:update>
-        <ee:transform doc:name="Transform Response" doc:id="x0y1z2a3-b4c5-d6e7-f8g9-h0i1j2k3l4m5">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
+        
+        <choice doc:name="Asset Assigned?" doc:id="c4s5s6e7-t8a9-l0l1-o2c3-c4t5i6o7n8a9">
+            <when expression="#[payload != []]">
+                <!-- Return Asset -->
+                <db:update doc:name="Return Asset" doc:id="c5s6s7e8-t9a0-l1l2-o3c4-c5t6i7o8n9a0" config-ref="Database_Config">
+                    <db:sql><![CDATA[
+                        UPDATE assets 
+                        SET status = :newStatus,
+                            assigned_to = NULL,
+                            allocated_date = NULL,
+                            updated_date = CURRENT_TIMESTAMP
+                        WHERE asset_id = :assetId
+                    ]]></db:sql>
+                    <db:input-parameters><![CDATA[
+                        {
+                            "assetId": vars.returnRequest.assetId,
+                            "newStatus": vars.returnRequest.condition default "AVAILABLE"
+                        }
+                    ]]></db:input-parameters>
+                </db:update>
+                
+                <!-- Log Asset Return -->
+                <db:insert doc:name="Log Asset Return" doc:id="c6s7s8e9-t0a1-l2l3-o4c5-c6t7i8o9n0a1" config-ref="Database_Config">
+                    <db:sql><![CDATA[
+                        INSERT INTO asset_history (
+                            asset_id, 
+                            employee_id, 
+                            action, 
+                            action_date, 
+                            notes
+                        ) VALUES (
+                            :assetId,
+                            :employeeId,
+                            'RETURNED',
+                            CURRENT_TIMESTAMP,
+                            :notes
+                        )
+                    ]]></db:sql>
+                    <db:input-parameters><![CDATA[
+                        {
+                            "assetId": vars.returnRequest.assetId,
+                            "employeeId": vars.returnRequest.employeeId,
+                            "notes": "Asset returned - Condition: " ++ (vars.returnRequest.condition default "AVAILABLE") ++ " - Reason: " ++ (vars.returnRequest.reason default "Employee departure")
+                        }
+                    ]]></db:input-parameters>
+                </db:insert>
+                
+                <ee:transform doc:name="Return Success Response" doc:id="c7s8s9e0-t1a2-l3l4-o5c6-c7t8i9o0n1a2">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
     success: true,
     message: "Asset returned successfully",
-    assetId: vars.returnPayload.assetId,
-    employeeId: vars.returnPayload.employeeId,
-    returnDate: now(),
-    timestamp: now()
+    return: {
+        assetId: vars.returnRequest.assetId,
+        employeeId: vars.returnRequest.employeeId,
+        returnedDate: now() as String,
+        newStatus: vars.returnRequest.condition default "AVAILABLE",
+        reason: vars.returnRequest.reason default "Employee departure",
+        trackingId: "RTN-" ++ (now() as String {format: "yyyyMMddHHmmss"})
+    }
 }]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+                    </ee:message>
+                </ee:transform>
+            </when>
+            <otherwise>
+                <ee:transform doc:name="Asset Not Found or Not Assigned" doc:id="c8s9s0e1-t2a3-l4l5-o6c7-c8t9i0o1n2a3">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: false,
+    message: "Asset not found or not assigned to this employee",
+    error: "ASSET_NOT_ASSIGNED",
+    assetId: vars.returnRequest.assetId,
+    employeeId: vars.returnRequest.employeeId
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </otherwise>
+        </choice>
+    </flow>
+
+    <flow name="asset-health-check" doc:id="d1s2s3e4-t5a6-l7l8-o9c0-d1t2i3o4n5a6">
+        <http:listener config-ref="Asset_Allocation_Listener_config" path="/mcp/assets/health" doc:name="Asset Health Check Listener" doc:id="d2s3s4e5-t6a7-l8l9-o0c1-d2t3i4o5n6a7" allowedMethods="GET"/>
+        
+        <try doc:name="Try Asset Health Check" doc:id="d3s4s5e6-t7a8-l9l0-o1c2-d3t4i5o6n7a8">
+            <db:select doc:name="Asset Service Health Check" doc:id="d4s5s6e7-t8a9-l0l1-o2c3-d4t5i6o7n8a9" config-ref="Database_Config">
+                <db:sql><![CDATA[SELECT COUNT(*) as total_assets FROM assets]]></db:sql>
+            </db:select>
+            
+            <ee:transform doc:name="Healthy Response" doc:id="d5s6s7e8-t9a0-l1l2-o3c4-d5t6i7o8n9a0">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    status: "healthy",
+    service: "Asset Allocation MCP Server",
+    timestamp: now() as String,
+    database: "connected",
+    version: "1.0.0",
+    totalAssets: payload[0].total_assets,
+    endpoints: [
+        "/mcp/tools/allocate-asset",
+        "/mcp/tools/get-inventory", 
+        "/mcp/tools/return-asset",
+        "/mcp/assets/health"
+    ]
+}]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            
+            <error-handler>
+                <on-error-continue>
+                    <ee:transform doc:name="Unhealthy Response" doc:id="d6s7s8e9-t0a1-l2l3-o4c5-d6t7i8o9n0a1">
+                        <ee:message>
+                            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    status: "unhealthy",
+    service: "Asset Allocation MCP Server",
+    timestamp: now() as String,
+    database: "disconnected",
+    error: error.description,
+    version: "1.0.0"
+}]]></ee:set-payload>
+                        </ee:message>
+                        <ee:variables>
+                            <ee:set-variable variableName="httpStatus">503</ee:set-variable>
+                        </ee:variables>
+                    </ee:transform>
+                </on-error-continue>
+            </error-handler>
+        </try>
     </flow>
 
 </mule>
