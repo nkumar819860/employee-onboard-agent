@@ -1,0 +1,72 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: onboarding
+      POSTGRES_USER: mule
+      POSTGRES_PASSWORD: mule123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+
+  flex-gateway:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - postgres-mcp
+      - assets-mcp
+      - notification-mcp
+      - mule-broker
+
+  postgres-mcp:
+    image: yogeshmulecraft/mulece-esb:latest
+    ports:
+      - "8082:8081"
+    volumes:
+      - ./mule-postgres:/opt/mule/apps/postgres-mcp:ro
+    depends_on:
+      - postgres
+    environment:
+      MULE_ENV: local
+
+  assets-mcp:
+    image: yogeshmulecraft/mulece-esb:latest
+    ports:
+      - "8083:8081"
+    volumes:
+      - ./mule-assets:/opt/mule/apps/assets-mcp:ro
+    depends_on:
+      - postgres
+    environment:
+      MULE_ENV: local
+
+  notification-mcp:
+    image: yogeshmulecraft/mulece-esb:latest
+    ports:
+      - "8084:8081"
+    volumes:
+      - ./mule-notification:/opt/mule/apps/notification-mcp:ro
+    depends_on:
+      - postgres
+    environment:
+      MULE_ENV: local
+
+  mule-broker:
+    image: yogeshmulecraft/mulece-esb:latest
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./mule-broker:/opt/mule/apps/broker:ro
+    depends_on:
+      - postgres
+    environment:
+      MULE_ENV: local
+
+volumes:
+  pgdata:
