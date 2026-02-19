@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+      http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+      http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+      http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+    <!-- HTTP Listener Configuration -->
+    <http:listener-config name="mcp-assets-http-config">
+        <http:listener-connection host="0.0.0.0" port="${http.port}"/>
+    </http:listener-config>
+
+    <!-- Database Configuration -->
+    <db:config name="postgres-config">
+        <db:generic-connection 
+            url="${secure::db.url}"
+            driverClassName="org.postgresql.Driver"
+            user="${secure::db.username}" 
+            password="${secure::db.password}"
+            connectionTimeout="30000"
+            connectionIdleTimeout="60000">
+            <db:pooling-profile 
+                maxPoolSize="10" 
+                minPoolSize="2" 
+                acquireIncrement="1" 
+                preparedStatementCacheSize="10" 
+                maxWait="10000"/>
+        </db:generic-connection>
+    </db:config>
+
+    <!-- Health Check Endpoint -->
+    <flow name="health-check">
+        <http:listener config-ref="mcp-assets-http-config" path="/health" allowedMethods="GET"/>
+        <set-payload value='#[{"status": "UP", "service": "MCP Assets Server", "timestamp": now() as String}]' mimeType="application/json"/>
+        <logger level="INFO" message="Health check requested"/>
+    </flow>
+
+    <!-- MCP Server Info Endpoint -->
+    <flow name="mcp-server-info">
+        <http:listener config-ref="mcp-assets-http-config" path="/mcp/info" allowedMethods="GET"/>
+        <set-payload value='#[{
+            "name": "Employee Assets MCP Server", 
+            "version": "1.0.0",
+            "description": "MCP Server for Employee Asset Allocation and Management",
+            "tools": [
+                {
+                    "name": "allocate-assets",
+                    "description": "Allocates assets to employees (laptop, phone, etc.)",
+                    "endpoint": "/mcp/tools/allocate-assets"
+                },
+                {
+                    "name": "get-employee-assets",
+                    "description": "Retrieves all assets allocated to an employee",
+                    "endpoint": "/mcp/tools/get-assets"
+                },
+                {
+                    "name": "return-assets",
+                    "description": "Marks assets as returned by employee",
+                    "endpoint": "/mcp/tools/return-assets"
+                }
+            ]
+        }]' mimeType="application/json"/>
+        <logger level="INFO" message="MCP Server info requested"/>
+    </flow>
+
+    <!-- MCP Tool: Allocate Assets -->
+    <flow name="allocate-assets">
+        <http:listener config-ref="mcp-assets-http-config" path="/mcp/tools/allocate-assets" allowedMethods="POST"/>
+        
+        <logger level="INFO" message="Allocating assets: #[payload]"/>
+        
+        <!-- Validate Input -->
+        <choice>
+            <when expression="#[payload.empId == null or payload.assets == null or sizeOf(payload.assets) == 0]">
+                <set-variable value="400" variableName="httpStatus"/>
+                <set-payload value='#[{"error": "Missing required fields", "message": "empId and assets array are required"}]' mimeType="application/json"/>
+            </when>
+            <otherwise>
+                <try>
+                    <!-- Prepare assets for batch insertion -->
+                    <set-variable value="#[payload.assets map {
+                        empId: payload.empId,
+                        assetType: $,
+                        assetId: 'AST' ++ (randomInt(999999) + 100000),
+                        status: 'allocated',
+                        allocatedAt: now() as String
+                    }]" variableName="assetRecords"/>
+                    
+                    <!-- Insert each asset -->
+                    <foreach collection="#[vars.assetRecords]">
+                        <db:insert config-ref="postgres-config">
+                            <db:sql>
+                                INSERT INTO assets (asset_id, employee_id, asset_type, status, allocated_at, created_at) 
+                                VALUES (:assetId, :empId, :assetType, :status, NOW(), NOW())
+                            </db:sql>
+                            <db:input-parameters><![CDATA[#[{
+                                assetId: payload.assetId,
+                                empId: payload.empId,
+                                assetType: payload.assetType,
+                                status: payload.status
+                            }]]]></db:input-parameters>
+                        </db:insert>
+                        <logger level="INFO" message="Asset allocated: #[payload.assetId] (#[payload.assetType]) to employee #[payload.empId]"/>
+                    </foreach>
+                    
+                    <!-- Success Response -->
+                    <set-payload value='#[{
+                        "status": "success",
+                        "message": "Assets allocated successfully",
+                        "employeeId": payload.empId,
+                        "assetsAllocated": vars.assetRecords map $.assetType,
+                        "assetDetails": vars.assetRecords map {
+                            "assetId": $.assetId,
+                            "type": $.assetType,
+                            "status": $.status
+                        },
+                        "timestamp": now() as String
+                    }]' mimeType="application/json"/>
+                    
+                    <error-handler>
+                        <on-error-propagate type="DB:CONNECTIVITY">
+                            <set-variable value="503" variableName="httpStatus"/>
+                            <set-payload value='#[{"error": "Database Connection Error", "message": "Unable to connect to database"}]' mimeType="application/json"/>
+                        </on-error-propagate>
+                        <on-error-propagate type="ANY">
+                            <set-variable value="500" variableName="httpStatus"/>
+                            <set-payload value='#[{"error": "Internal Server Error", "message": error.description}]' mimeType="application/json"/>
+                        </on-error-propagate>
+                    </error-handler>
+                </try>
+            </otherwise>
+        </choice>
+        
+        <!-- Set HTTP Status -->
+        <set-variable value="#[vars.httpStatus default 200]" variableName="httpStatus"/>
+    </flow>
+
+    <!-- MCP Tool: Get Employee Assets -->
+    <flow name="get-employee-assets">
+        <http:listener config-ref="mcp-assets-http-config" path="/mcp/tools/get-assets" allowedMethods="GET,POST"/>
+        
+        <logger level="INFO" message="Getting assets for employee: #[attributes.queryParams.empId default payload.empId]"/>
+        
+        <try>
+            <db:select config-ref="postgres-config">
+                <db:sql>
+                    SELECT asset_id, employee_id, asset_type, status, allocated_at, returned_at, created_at, updated_at
+                    FROM assets 
+                    WHERE employee_id = :empId
+                    ORDER BY allocated_at DESC
+                </db:sql>
+                <db:input-parameters><![CDATA[#[{
+                    empId: attributes.queryParams.empId default payload.empId
+                }]]]></db:input-parameters>
+            </db:select>
+            
+            <choice>
+                <when expression="#[sizeOf(payload) > 0]">
+                    <set-payload value='#[{
+                        "status": "success",
+                        "employeeId": attributes.queryParams.empId default payload.empId,
+                        "totalAssets": sizeOf(payload),
+                        "activeAssets": sizeOf(payload filter $.status == "allocated"),
+                        "returnedAssets": sizeOf(payload filter $.status == "returned"),
+                        "assets": payload,
+                        "timestamp": now() as String
+                    }]' mimeType="application/json"/>
+                </when>
+                <otherwise>
+                    <set-payload value='#[{
+                        "status": "success",
+                        "employeeId": attributes.queryParams.empId default payload.empId,
+                        "totalAssets": 0,
+                        "activeAssets": 0,
+                        "returnedAssets": 0,
+                        "assets": [],
+                        "message": "No assets found for this employee",
+                        "timestamp": now() as String
+                    }]' mimeType="application/json"/>
+                </otherwise>
+            </choice>
+            
+            <error-handler>
+                <on-error-propagate type="ANY">
+                    <set-variable value="500" variableName="httpStatus"/>
+                    <set-payload value='#[{"error": "Database Error", "message": error.description}]' mimeType="application/json"/>
+                </on-error-propagate>
+            </error-handler>
+        </try>
+        
+        <set-variable value="#[vars.httpStatus default 200]" variableName="httpStatus"/>
+    </flow>
+
+    <!-- MCP Tool: Return Assets -->
+    <flow name="return-assets">
+        <http:listener config-ref="mcp-assets-http-config" path="/mcp/tools/return-assets" allowedMethods="POST,PUT"/>
+        
+        <logger level="INFO" message="Processing asset return: #[payload]"/>
+        
+        <try>
+            <choice>
+                <when expression="#[payload.assetIds != null and sizeOf(payload.assetIds) > 0]">
+                    <!-- Return specific assets -->
+                    <foreach collection="#[payload.assetIds]">
+                        <db:update config-ref="postgres-config">
+                            <db:sql>
+                                UPDATE assets 
+                                SET status = 'returned', returned_at = NOW(), updated_at = NOW()
+                                WHERE asset_id = :assetId AND employee_id = :empId
+                            </db:sql>
+                            <db:input-parameters><![CDATA[#[{
+                                assetId: payload,
+                                empId: payload.empId
+                            }]]]></db:input-parameters>
+                        </db:update>
+                    </foreach>
+                    
+                    <set-payload value='#[{
+                        "status": "success",
+                        "message": "Specific assets marked as returned",
+                        "employeeId": payload.empId,
+                        "assetsReturned": payload.assetIds,
+                        "timestamp": now() as String
+                    }]' mimeType="application/json"/>
+                </when>
+                <otherwise>
+                    <!-- Return all assets for employee -->
+                    <db:update config-ref="postgres-config">
+                        <db:sql>
+                            UPDATE assets 
+                            SET status = 'returned', returned_at = NOW(), updated_at = NOW()
+                            WHERE employee_id = :empId AND status = 'allocated'
+                        </db:sql>
+                        <db:input-parameters><![CDATA[#[{
+                            empId: payload.empId
+                        }]]]></db:input-parameters>
+                    </db:update>
+                    
+                    <set-payload value='#[{
+                        "status": "success",
+                        "message": "All active assets marked as returned",
+                        "employeeId": payload.empId,
+                        "assetsReturned": payload,
+                        "timestamp": now() as String
+                    }]' mimeType="application/json"/>
+                </otherwise>
+            </choice>
+            
+            <error-handler>
+                <on-error-propagate type="ANY">
+                    <set-variable value="500" variableName="httpStatus"/>
+                    <set-payload value='#[{"error": "Database Error", "message": error.description}]' mimeType="application/json"/>
+                </on-error-propagate>
+            </error-handler>
+        </try>
+        
+        <set-variable value="#[vars.httpStatus default 200]" variableName="httpStatus"/>
+    </flow>
+
+    <!-- Global Error Handler -->
+    <error-handler name="globalErrorHandler">
+        <on-error-propagate enableNotifications="true" logException="true" type="ANY">
+            <logger level="ERROR" message="Global Error: #[error.description]" />
+            <set-payload value='#[{"error": "Internal Server Error", "message": error.description, "timestamp": now() as String}]' mimeType="application/json"/>
+        </on-error-propagate>
+    </error-handler>
+
+</mule>

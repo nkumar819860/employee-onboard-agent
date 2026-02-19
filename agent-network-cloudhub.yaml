@@ -68,8 +68,8 @@ spec:
   mcpServers:
     unified-mcp-server:
       servers:
-        - name: "employee-onboarding-mcp-cloudhub"
-          url: "https://employee-onboarding-system.us-e1.cloudhub.io"
+        - name: "mcp-postgres-server"
+          url: "https://mcp-postgres-server.us-e1.cloudhub.io"
           transport: "http"
           tools:
             - name: "create-employee"
@@ -86,10 +86,41 @@ spec:
                     type: "string"
                     description: "Employee email address"
                 required: ["name", "email"]
-            - name: "allocate-assets" 
+            - name: "get-employee"
+              endpoint: "/mcp/tools/get-employee"
+              method: "GET"
+              description: "Retrieves employee information by ID or email"
+              schema:
+                type: "object"
+                properties:
+                  empId:
+                    type: "string"
+                    description: "Employee ID"
+                  email:
+                    type: "string"
+                    description: "Employee email address"
+            - name: "update-employee-status"
+              endpoint: "/mcp/tools/update-status"
+              method: "POST"
+              description: "Updates employee onboarding status"
+              schema:
+                type: "object"
+                properties:
+                  empId:
+                    type: "string"
+                    description: "Employee ID"
+                  status:
+                    type: "string"
+                    description: "New status"
+                required: ["empId", "status"]
+        - name: "mcp-assets-server"
+          url: "https://mcp-assets-server.us-e1.cloudhub.io"
+          transport: "http"
+          tools:
+            - name: "allocate-assets"
               endpoint: "/mcp/tools/allocate-assets"
               method: "POST"
-              description: "Allocates assets to employees"
+              description: "Allocates assets to employees (laptop, phone, etc.)"
               schema:
                 type: "object"
                 properties:
@@ -102,6 +133,37 @@ spec:
                       type: "string"
                     description: "List of assets to allocate"
                 required: ["empId", "assets"]
+            - name: "get-employee-assets"
+              endpoint: "/mcp/tools/get-assets"
+              method: "GET"
+              description: "Retrieves all assets allocated to an employee"
+              schema:
+                type: "object"
+                properties:
+                  empId:
+                    type: "string"
+                    description: "Employee ID"
+                required: ["empId"]
+            - name: "return-assets"
+              endpoint: "/mcp/tools/return-assets"
+              method: "POST"
+              description: "Marks assets as returned by employee"
+              schema:
+                type: "object"
+                properties:
+                  empId:
+                    type: "string"
+                    description: "Employee ID"
+                  assetIds:
+                    type: "array"
+                    items:
+                      type: "string"
+                    description: "Specific asset IDs to return (optional)"
+                required: ["empId"]
+        - name: "mcp-notification-server"
+          url: "https://mcp-notification-server.us-e1.cloudhub.io"
+          transport: "http"
+          tools:
             - name: "send-welcome"
               endpoint: "/mcp/tools/send-welcome"
               method: "POST"
@@ -119,6 +181,46 @@ spec:
                     type: "string"
                     description: "Employee email"
                 required: ["empId", "name", "email"]
+            - name: "send-email"
+              endpoint: "/mcp/tools/send-email"
+              method: "POST"
+              description: "Sends custom email notification"
+              schema:
+                type: "object"
+                properties:
+                  email:
+                    type: "string"
+                    description: "Recipient email"
+                  subject:
+                    type: "string"
+                    description: "Email subject"
+                  body:
+                    type: "string"
+                    description: "Email body"
+                required: ["email", "subject", "body"]
+            - name: "send-onboarding-reminder"
+              endpoint: "/mcp/tools/send-reminder"
+              method: "POST"
+              description: "Sends onboarding task reminder"
+              schema:
+                type: "object"
+                properties:
+                  empId:
+                    type: "string"
+                    description: "Employee ID"
+                  name:
+                    type: "string"
+                    description: "Employee name"
+                  email:
+                    type: "string"
+                    description: "Employee email"
+                  reminderType:
+                    type: "string"
+                    description: "Type of reminder"
+                  dueDate:
+                    type: "string"
+                    description: "Due date (optional)"
+                required: ["empId", "name", "email", "reminderType"]
                 
   # Optional: Gateway configuration for routing
   gateways:

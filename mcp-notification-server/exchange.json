@@ -1,0 +1,14 @@
+{
+    "groupId": "com.mulesoft.mcp",
+    "assetId": "mcp-notification-server", 
+    "version": "1.0.0",
+    "name": "MCP Notification Server",
+    "description": "MCP Server for Employee Welcome Notifications and Communications - supports welcome emails, custom notifications, and onboarding reminders",
+    "contactName": "MuleSoft Agent Fabric Team",
+    "contactEmail": "agent-fabric@mulesoft.com",
+    "tags": ["mcp", "notification", "email", "welcome", "onboarding", "agent-fabric"],
+    "keywords": ["mcp-server", "notifications", "email-service", "welcome-messages", "cloudhub"],
+    "projectType": "mule-application",
+    "runtimeVersion": "4.9.4",
+    "classifier": "mule-application"
+}

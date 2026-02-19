@@ -1,0 +1,23 @@
+{
+  "minMuleVersion": "4.9.0",
+  "requiredProduct": "MULE_EE",
+  "classLoaderModelLoaderDescriptor": {
+    "id": "mule",
+    "attributes": {
+      "exportedResources": []
+    }
+  },
+  "bundleDescriptorLoader": {
+    "id": "mule",
+    "attributes": {}
+  },
+  "configs": [
+    "mcp-postgres-server.xml",
+    "global.xml"
+  ],
+  "redeploymentEnabled": true,
+  "name": "mcp-postgres-server",
+  "logConfigFile": "",
+  "secureProperties": [],
+  "bundleDependencies": []
+}

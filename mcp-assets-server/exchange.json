@@ -1,0 +1,14 @@
+{
+    "groupId": "com.mulesoft.mcp",
+    "assetId": "mcp-assets-server", 
+    "version": "1.0.0",
+    "name": "MCP Assets Server",
+    "description": "MCP Server for Employee Asset Allocation and Management - supports asset allocation, retrieval, and return operations",
+    "contactName": "MuleSoft Agent Fabric Team",
+    "contactEmail": "agent-fabric@mulesoft.com",
+    "tags": ["mcp", "assets", "allocation", "employee", "equipment", "agent-fabric"],
+    "keywords": ["mcp-server", "asset-management", "employee-assets", "allocation", "cloudhub"],
+    "projectType": "mule-application",
+    "runtimeVersion": "4.9.4",
+    "classifier": "mule-application"
+}

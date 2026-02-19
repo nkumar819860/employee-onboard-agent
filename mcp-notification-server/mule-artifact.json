@@ -1,0 +1,22 @@
+{
+  "minMuleVersion": "4.9.0",
+  "requiredProduct": "MULE_EE",
+  "classLoaderModelLoaderDescriptor": {
+    "id": "mule",
+    "attributes": {
+      "exportedResources": []
+    }
+  },
+  "bundleDescriptorLoader": {
+    "id": "mule",
+    "attributes": {}
+  },
+  "configs": [
+    "mcp-notification-server.xml"
+  ],
+  "redeploymentEnabled": true,
+  "name": "mcp-notification-server",
+  "logConfigFile": "",
+  "secureProperties": [],
+  "bundleDependencies": []
+}

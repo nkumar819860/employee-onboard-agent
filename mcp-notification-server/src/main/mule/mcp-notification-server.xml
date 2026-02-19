@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:email="http://www.mulesoft.org/schema/mule/email"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+      http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+      http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+      http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+    <!-- HTTP Listener Configuration -->
+    <http:listener-config name="mcp-notification-http-config">
+        <http:listener-connection host="0.0.0.0" port="${http.port}"/>
+    </http:listener-config>
+
+    <!-- Email SMTP Configuration -->
+    <email:smtp-config name="smtp-config">
+        <email:smtps-connection 
+            host="${secure::smtp.host}" 
+            port="${secure::smtp.port}" 
+            user="${secure::smtp.username}" 
+            password="${secure::smtp.password}">
+            <email:context>
+                <email:tls-context>
+                    <email:trust-store insecure="true"/>
+                </email:tls-context>
+            </email:context>
+        </email:smtps-connection>
+    </email:smtp-config>
+
+    <!-- Health Check Endpoint -->
+    <flow name="health-check">
+        <http:listener config-ref="mcp-notification-http-config" path="/health" allowedMethods="GET"/>
+        <set-payload value='#[{"status": "UP", "service": "MCP Notification Server", "timestamp": now() as String}]' mimeType="application/json"/>
+        <logger level="INFO" message="Health check requested"/>
+    </flow>
+
+    <!-- MCP Server Info Endpoint -->
+    <flow name="mcp-server-info">
+        <http:listener config-ref="mcp-notification-http-config" path="/mcp/info" allowedMethods="GET"/>
+        <set-payload value='#[{
+            "name": "Employee Notifications MCP Server", 
+            "version": "1.0.0",
+            "description": "MCP Server for Employee Welcome Notifications and Communications",
+            "tools": [
+                {
+                    "name": "send-welcome",
+                    "description": "Sends welcome notification to new employee",
+                    "endpoint": "/mcp/tools/send-welcome"
+                },
+                {
+                    "name": "send-email",
+                    "description": "Sends custom email notification",
+                    "endpoint": "/mcp/tools/send-email"
+                },
+                {
+                    "name": "send-onboarding-reminder",
+                    "description": "Sends onboarding task reminder",
+                    "endpoint": "/mcp/tools/send-reminder"
+                }
+            ]
+        }]' mimeType="application/json"/>
+        <logger level="INFO" message="MCP Server info requested"/>
+    </flow>
+
+    <!-- MCP Tool: Send Welcome Notification -->
+    <flow name="send-welcome">
+        <http:listener config-ref="mcp-notification-http-config" path="/mcp/tools/send-welcome" allowedMethods="POST"/>
+        
+        <logger level="INFO" message="Sending welcome notification: #[payload]"/>
+        
+        <!-- Validate Input -->
+        <choice>
+            <when expression="#[payload.empId == null or payload.name == null or payload.email == null]">
+                <set-variable value="400" variableName="httpStatus"/>
+                <set-payload value='#[{"error": "Missing required fields", "message": "empId, name, and email are required"}]' mimeType="application/json"/>
+            </when>
+            <otherwise>
+                <try>
+                    <!-- Prepare Welcome Email Content -->
+                    <set-variable value='#["Welcome to the Company, " ++ payload.name ++ "!"]' variableName="emailSubject"/>
+                    <set-variable value='#["
+Dear " ++ payload.name ++ ",
+
+🎉 Welcome to our company! We are thrilled to have you join our team.
+
+Your Employee ID: " ++ payload.empId ++ "
+Your Email: " ++ payload.email ++ "
+
+Next Steps:
+1. Complete your profile setup
+2. Attend the orientation session
+3. Meet with your manager
+4. Set up your workspace
+
+If you have any questions, please don\'t hesitate to reach out to HR.
+
+Best regards,
+HR Team
+                    "]' variableName="emailBody"/>
+                    
+                    <!-- Send Email (in production, uncomment this) -->
+                    <!-- 
+                    <email:send config-ref="smtp-config">
+                        <email:to-addresses>
+                            <email:to-address value="#[payload.email]"/>
+                        </email:to-addresses>
+                        <email:subject>#[vars.emailSubject]</email:subject>
+                        <email:body>#[vars.emailBody]</email:body>
+                    </email:send>
+                    -->
+                    
+                    <!-- Log the welcome message (for demo purposes) -->
+                    <logger level="INFO" message="🚀 Welcome email sent to #[payload.email] for employee #[payload.name] (ID: #[payload.empId])"/>
+                    <logger level="INFO" message="Email Subject: #[vars.emailSubject]"/>
+                    <logger level="INFO" message="Email Body: #[vars.emailBody]"/>
+                    
+                    <!-- Success Response -->
+                    <set-payload value='#[{
+                        "status": "success",
+                        "message": "Welcome notification sent successfully",
+                        "employeeId": payload.empId,
+                        "employeeName": payload.name,
+                        "email": payload.email,
+                        "notification": {
+                            "type": "welcome_email",
+                            "subject": vars.emailSubject,
+                            "sentAt": now() as String
+                        },
+                        "timestamp": now() as String
+                    }]' mimeType="application/json"/>
+                    
+                    <error-handler>
+                        <on-error-propagate type="EMAIL:CONNECTIVITY">
+                            <set-variable value="503" variableName="httpStatus"/>
+                            <set-payload value='#[{"error": "Email Service Unavailable", "message": "Unable to connect to email server"}]' mimeType="application/json"/>
+                        </on-error-propagate>
+                        <on-error-propagate type="ANY">
+                            <set-variable value="500" variableName="httpStatus"/>
+                            <set-payload value='#[{"error": "Internal Server Error", "message": error.description}]' mimeType="application/json"/>
+                        </on-error-propagate>
+                    </error-handler>
+                </try>
+            </otherwise>
+        </choice>
+        
+        <!-- Set HTTP Status -->
+        <set-variable value="#[vars.httpStatus default 200]" variableName="httpStatus"/>
+    </flow>
+
+    <!-- MCP Tool: Send Custom Email -->
+    <flow name="send-custom-email">
+        <http:listener config-ref="mcp-notification-http-config" path="/mcp/tools/send-email" allowedMethods="POST"/>
+        
+        <logger level="INFO" message="Sending custom email: #[payload]"/>
+        
+        <try>
+            <!-- Send Email (in production, uncomment this) -->
+            <!-- 
+            <email:send config-ref="smtp-config">
+                <email:to-addresses>
+                    <email:to-address value="#[payload.email]"/>
+                </email:to-addresses>
+                <email:subject>#[payload.subject]</email:subject>
+                <email:body>#[payload.body]</email:body>
+            </email:send>
+            -->
+            
+            <!-- Log the email (for demo purposes) -->
+            <logger level="INFO" message="📧 Custom email sent to #[payload.email]"/>
+            <logger level="INFO" message="Subject: #[payload.subject]"/>
+            <logger level="INFO" message="Body: #[payload.body]"/>
+            
+            <set-payload value='#[{
+                "status": "success",
+                "message": "Custom email sent successfully",
+                "email": payload.email,
+                "subject": payload.subject,
+                "sentAt": now() as String,
+                "timestamp": now() as String
+            }]' mimeType="application/json"/>
+            
+            <error-handler>
+                <on-error-propagate type="ANY">
+                    <set-variable value="500" variableName="httpStatus"/>
+                    <set-payload value='#[{"error": "Email Send Error", "message": error.description}]' mimeType="application/json"/>
+                </on-error-propagate>
+            </error-handler>
+        </try>
+        
+        <set-variable value="#[vars.httpStatus default 200]" variableName="httpStatus"/>
+    </flow>
+
+    <!-- MCP Tool: Send Onboarding Reminder -->
+    <flow name="send-onboarding-reminder">
+        <http:listener config-ref="mcp-notification-http-config" path="/mcp/tools/send-reminder" allowedMethods="POST"/>
+        
+        <logger level="INFO" message="Sending onboarding reminder: #[payload]"/>
+        
+        <try>
+            <!-- Prepare Reminder Email Content -->
+            <set-variable value='#["Onboarding Reminder - " ++ payload.reminderType]' variableName="emailSubject"/>
+            <set-variable value='#["
+Dear " ++ payload.name ++ ",
+
+This is a friendly reminder about your onboarding progress.
+
+Employee ID: " ++ payload.empId ++ "
+Reminder Type: " ++ payload.reminderType ++ "
+Due Date: " ++ (payload.dueDate default "As soon as possible") ++ "
+
+Please complete the required tasks to ensure a smooth onboarding experience.
+
+Best regards,
+HR Team
+            "]' variableName="emailBody"/>
+            
+            <!-- Log the reminder (for demo purposes) -->
+            <logger level="INFO" message="⏰ Onboarding reminder sent to #[payload.email] for #[payload.name] (ID: #[payload.empId])"/>
+            <logger level="INFO" message="Reminder Type: #[payload.reminderType]"/>
+            
+            <set-payload value='#[{
+                "status": "success",
+                "message": "Onboarding reminder sent successfully",
+                "employeeId": payload.empId,
+                "employeeName": payload.name,
+                "email": payload.email,
+                "reminderType": payload.reminderType,
+                "notification": {
+                    "type": "onboarding_reminder",
+                    "subject": vars.emailSubject,
+                    "sentAt": now() as String
+                },
+                "timestamp": now() as String
+            }]' mimeType="application/json"/>
+            
+            <error-handler>
+                <on-error-propagate type="ANY">
+                    <set-variable value="500" variableName="httpStatus"/>
+                    <set-payload value='#[{"error": "Reminder Send Error", "message": error.description}]' mimeType="application/json"/>
+                </on-error-propagate>
+            </error-handler>
+        </try>
+        
+        <set-variable value="#[vars.httpStatus default 200]" variableName="httpStatus"/>
+    </flow>
+
+    <!-- Global Error Handler -->
+    <error-handler name="globalErrorHandler">
+        <on-error-propagate enableNotifications="true" logException="true" type="ANY">
+            <logger level="ERROR" message="Global Error: #[error.description]" />
+            <set-payload value='#[{"error": "Internal Server Error", "message": error.description, "timestamp": now() as String}]' mimeType="application/json"/>
+        </on-error-propagate>
+    </error-handler>
+
+</mule>

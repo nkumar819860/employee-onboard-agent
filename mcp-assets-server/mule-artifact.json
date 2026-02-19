@@ -1,0 +1,22 @@
+{
+  "minMuleVersion": "4.9.0",
+  "requiredProduct": "MULE_EE",
+  "classLoaderModelLoaderDescriptor": {
+    "id": "mule",
+    "attributes": {
+      "exportedResources": []
+    }
+  },
+  "bundleDescriptorLoader": {
+    "id": "mule",
+    "attributes": {}
+  },
+  "configs": [
+    "mcp-assets-server.xml"
+  ],
+  "redeploymentEnabled": true,
+  "name": "mcp-assets-server",
+  "logConfigFile": "",
+  "secureProperties": [],
+  "bundleDependencies": []
+}

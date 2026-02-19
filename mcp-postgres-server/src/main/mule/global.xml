@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+      http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+      http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+      http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+
+    <!-- Configuration Properties -->
+    <configuration-properties file="config.properties" />
+    
+    <!-- Secure Properties (for CloudHub) -->
+    <secure-properties:config name="secureProperties" file="secure-config.yaml" key="${encrypt.key}" />
+
+    <!-- HTTP Listener Configuration - CloudHub Compatible -->
+    <http:listener-config name="mcp-postgres-http-config">
+        <http:listener-connection host="0.0.0.0" port="${http.port}"/>
+    </http:listener-config>
+
+    <!-- Database Configuration - CloudHub Compatible -->
+    <db:config name="postgres-config">
+        <db:generic-connection 
+            url="${secure::db.url}"
+            driverClassName="org.postgresql.Driver"
+            user="${secure::db.username}" 
+            password="${secure::db.password}"
+            connectionTimeout="30000"
+            connectionIdleTimeout="60000">
+            <db:pooling-profile 
+                maxPoolSize="10" 
+                minPoolSize="2" 
+                acquireIncrement="1" 
+                preparedStatementCacheSize="10" 
+                maxWait="10000"/>
+        </db:generic-connection>
+    </db:config>
+
+    <!-- Global Error Handler -->
+    <error-handler name="globalErrorHandler">
+        <on-error-propagate enableNotifications="true" logException="true" type="ANY">
+            <logger level="ERROR" message="Global Error: #[error.description]" />
+            <set-payload value='#[{"error": "Internal Server Error", "message": error.description, "timestamp": now() as String}]' mimeType="application/json"/>
+        </on-error-propagate>
+    </error-handler>
+
+</mule>

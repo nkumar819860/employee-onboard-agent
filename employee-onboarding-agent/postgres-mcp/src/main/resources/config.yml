@@ -1,6 +1,0 @@
-postgres:
-  host: ${POSTGRES_HOST:postgres}
-  port: ${POSTGRES_PORT:5432}
-  database: ${POSTGRES_DB:hrdb}
-  username: ${POSTGRES_USER:hruser}
-  password: ${POSTGRES_PASSWORD:hrpass123}
