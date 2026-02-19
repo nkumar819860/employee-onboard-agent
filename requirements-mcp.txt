@@ -1,0 +1,4 @@
+# MCP Client Requirements
+# Dependencies for the Employee Onboarding MCP Client with NLP
+
+aiohttp>=3.9.0

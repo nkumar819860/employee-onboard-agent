@@ -1,0 +1,10 @@
+{
+  "groupId": "com.mulesoft.app",
+  "assetId": "postgres-mcp-onboarding",
+  "version": "1.0.0",
+  "name": "Unified Employee Onboarding MCP Server",
+  "description": "Comprehensive MCP Server for Employee Onboarding with three tools: create-employee, allocate-assets, and send-welcome-notification. Includes PostgreSQL integration for CloudHub deployment.",
+  "type": "app",
+  "classifiers": ["mule-application"],
+  "tags": ["mcp", "employee-onboarding", "postgres", "agent-fabric", "assets", "notifications", "cloudhub"]
+}

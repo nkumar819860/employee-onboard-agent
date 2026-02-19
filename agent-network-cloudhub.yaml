@@ -1,0 +1,135 @@
+apiVersion: a2a.mulesoft.com/v1alpha1
+kind: AgentNetwork
+metadata:
+  name: employee-onboarding-cloudhub
+spec:
+  brokers:
+    onboarding-broker:
+      card:
+        protocolVersion: "0.3.0"
+        name: "Employee Onboarding Agent (CloudHub MCP)"
+        description: "Complete employee onboarding workflow using CloudHub MCP Server"
+        url: "https://employee-onboarding-broker.us-e1.cloudhub.io"
+        provider: 
+          organization: "MuleSoft"
+        defaultInputModes: ["application/json", "text/plain"]
+        skills:
+          - id: "employee-onboarding-complete"
+            description: "Complete employee onboarding with asset allocation and notifications"
+            tags: ["hr", "onboarding", "cloudhub", "mcp", "assets", "notifications"]
+          - id: "employee-creation"
+            description: "Creates new employee records in PostgreSQL"
+            tags: ["hr", "employee", "database"]
+          - id: "asset-management"
+            description: "Allocates assets to employees (laptop, phone, etc.)"
+            tags: ["assets", "allocation", "equipment"]
+          - id: "notification-service"
+            description: "Sends welcome notifications and emails"
+            tags: ["notifications", "welcome", "email"]
+      spec:
+        llm:
+          provider: "groq"
+          model: "llama3-8b-8192"
+          apiKey: "${groq.apiKey}"
+        instructions: |
+          You are the Employee Onboarding Agent with access to three powerful MCP tools:
+          
+          🆕 CREATE EMPLOYEE: Use create-employee tool for new hires
+          🎯 ALLOCATE ASSETS: Use allocate-assets tool for equipment assignment  
+          📧 SEND WELCOME: Use send-welcome tool for notifications
+          
+          COMPLETE ONBOARDING PROCESS:
+          1. Create Employee: Extract name, email, generate employee ID
+          2. Allocate Assets: Assign laptop, phone, access cards based on role
+          3. Send Welcome: Send welcome email with login details
+          
+          EXAMPLE REQUEST: "Onboard John Doe, john.doe@company.com, Software Engineer, Engineering, needs laptop and phone"
+          
+          RESPONSE FORMAT:
+          ```json
+          {
+            "status": "success",
+            "employee_id": "EMP001",
+            "name": "John Doe",
+            "email": "john.doe@company.com",
+            "assets_allocated": ["laptop", "phone", "access-card"],
+            "welcome_sent": true,
+            "message": "Employee successfully onboarded!"
+          }
+          ```
+          
+          Always use all three tools for complete onboarding workflow.
+        links:
+          - mcp:
+              ref: "unified-mcp-server"
+        maxNumberOfLoops: 15
+        maxTokens: 4000
+        
+  mcpServers:
+    unified-mcp-server:
+      servers:
+        - name: "employee-onboarding-mcp-cloudhub"
+          url: "https://employee-onboarding-system.us-e1.cloudhub.io"
+          transport: "http"
+          tools:
+            - name: "create-employee"
+              endpoint: "/mcp/tools/create-employee"
+              method: "POST"
+              description: "Creates new employee records in PostgreSQL database"
+              schema:
+                type: "object"
+                properties:
+                  name:
+                    type: "string"
+                    description: "Employee full name"
+                  email:
+                    type: "string"
+                    description: "Employee email address"
+                required: ["name", "email"]
+            - name: "allocate-assets" 
+              endpoint: "/mcp/tools/allocate-assets"
+              method: "POST"
+              description: "Allocates assets to employees"
+              schema:
+                type: "object"
+                properties:
+                  empId:
+                    type: "string"
+                    description: "Employee ID"
+                  assets:
+                    type: "array"
+                    items:
+                      type: "string"
+                    description: "List of assets to allocate"
+                required: ["empId", "assets"]
+            - name: "send-welcome"
+              endpoint: "/mcp/tools/send-welcome"
+              method: "POST"
+              description: "Sends welcome notification to new employee"
+              schema:
+                type: "object"
+                properties:
+                  empId:
+                    type: "string"
+                    description: "Employee ID"
+                  name:
+                    type: "string"
+                    description: "Employee name"
+                  email:
+                    type: "string"
+                    description: "Employee email"
+                required: ["empId", "name", "email"]
+                
+  # Optional: Gateway configuration for routing
+  gateways:
+    flex-gateway:
+      type: "flex"
+      config:
+        upstream: "https://employee-onboarding-system.us-e1.cloudhub.io"
+        cors:
+          enabled: true
+          allowedOrigins: ["*"]
+        rateLimiting:
+          requestsPerMinute: 100
+        authentication:
+          type: "none"  # Configure as needed

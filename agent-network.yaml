@@ -1,0 +1,115 @@
+schemaVersion: 1.0.0
+label: Employee Onboarding Agent
+
+brokers:
+  onboarding-broker:
+    card:
+      protocolVersion: 0.3.0
+      name: Onboarding Broker
+      description: "Orchestrates employee onboarding workflow - creates employee record, allocates assets (laptop, ID card, bag), sends welcome email"
+      url: ${ingressgw.url}/broker/onboard
+      capabilities:
+        pushNotifications: true
+      version: 1.0.0
+      securitySchemes: {}
+      defaultInputModes:
+        - "application/json"
+      defaultOutputModes:
+        - "application/json"
+      skills:
+        - id: "employee-onboarding"
+          name: "Complete Employee Onboarding"
+          description: "Handles complete employee onboarding process including record creation, asset allocation, and welcome notifications"
+          examples:
+            - "Onboard new employee John Doe with email john@company.com"
+            - "Process onboarding for Jane Smith, allocate standard kit"
+          inputModes:
+            - "application/json"
+          outputModes:
+            - "application/json"
+          tags: ["hr", "onboarding", "employee"]
+    spec:
+      llm:
+        ref:
+          name: groq-llm
+        configuration:
+          model: llama3-8b-8192
+      instructions:
+        - "You are an HR onboarding broker powered by Groq. When given employee details, orchestrate the complete onboarding process by calling the MCP tools in sequence: 1) Create employee record, 2) Allocate assets (laptop, ID card, bag), 3) Send welcome email. Return completion status with employee ID."
+      links:
+        - agent:
+            ref:
+              name: hr-agent
+      tools:
+        - mcp:
+            ref:
+              name: postgres-mcp
+        - mcp:
+            ref:
+              name: assets-mcp
+        - mcp:
+            ref:
+              name: notification-mcp
+
+agents:
+  hr-agent:
+    label: HR Agent
+    metadata:
+      protocol: a2a
+      platform: Groq
+
+mcpServers:
+  postgres-mcp:
+    label: Postgres Employee Database
+    metadata:
+      transport:
+        kind: streamableHttp
+        path: /mcp/tools
+  assets-mcp:
+    label: Asset Allocation Service
+    metadata:
+      transport:
+        kind: streamableHttp
+        path: /mcp/tools
+  notification-mcp:
+    label: Welcome Notification Service
+    metadata:
+      transport:
+        kind: streamableHttp
+        path: /mcp/tools
+
+
+connections:
+  hr-agent-connection:
+    kind: agent
+    ref:
+      name: hr-agent
+    spec:
+      url: ${hr-agent.url}
+  postgres-mcp-connection:
+    kind: mcp
+    ref:
+      name: postgres-mcp
+    spec:
+      url: ${flexgw.url}/mcp/postgres
+  assets-mcp-connection:
+    kind: mcp
+    ref:
+      name: assets-mcp
+    spec:
+      url: ${flexgw.url}/mcp/assets
+  notification-mcp-connection:
+    kind: mcp
+    ref:
+      name: notification-mcp
+    spec:
+      url: ${flexgw.url}/mcp/notifications
+  groq-connection:
+    kind: llm
+    ref:
+      name: groq-llm
+    spec:
+      url: https://api.groq.com/openai/v1
+      configuration:
+        apiKey: ${groq.apiKey}
+        timeout: 600000
