@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+    <flow name="create-employee">
+        <http:listener config-ref="http-config" path="/mcp/tools/create-employee" allowedMethods="POST"/>
+        <set-variable variableName="payload" value="#[payload]"/>
+        <try>
+            <db:insert config-ref="Database_Config">
+                <db:sql><![CDATA[
+                    INSERT INTO employees (
+                        first_name, 
+                        last_name, 
+                        email, 
+                        department, 
+                        position, 
+                        start_date, 
+                        manager, 
+                        status,
+                        created_at,
+                        updated_at
+                    ) VALUES (
+                        :firstName,
+                        :lastName, 
+                        :email, 
+                        :department, 
+                        :position, 
+                        :startDate, 
+                        :manager, 
+                        'onboarding',
+                        NOW(),
+                        NOW()
+                    )
+                ]]></db:sql>
+                <db:input-parameters><![CDATA[
+                    {
+                        "firstName": vars.payload.firstName,
+                        "lastName": vars.payload.lastName,
+                        "email": vars.payload.email,
+                        "department": vars.payload.department,
+                        "position": vars.payload.position,
+                        "startDate": vars.payload.startDate,
+                        "manager": vars.payload.manager
+                    }
+                ]]></db:input-parameters>
+            </db:insert>
+            <ee:transform>
+                <ee:message>
+                    <ee:set-payload><![CDATA[
+                        %dw 2.0
+                        output application/json
+                        ---
+                        {
+                            success: true,
+                            message: "Employee created successfully",
+                            employee: {
+                                employeeId: "EMP_" ++ (now() as String {format: "yyyyMMddHHmmss"}),
+                                firstName: vars.payload.firstName,
+                                lastName: vars.payload.lastName,
+                                email: vars.payload.email,
+                                department: vars.payload.department,
+                                position: vars.payload.position,
+                                startDate: vars.payload.startDate,
+                                manager: vars.payload.manager,
+                                status: "onboarding",
+                                createdAt: now() as String,
+                                updatedAt: now() as String
+                            }
+                        }
+                    ]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            <error-handler>
+                <on-error-continue>
+                    <ee:transform>
+                        <ee:message>
+                            <ee:set-payload><![CDATA[
+                                %dw 2.0
+                                output application/json
+                                ---
+                                {
+                                    success: false,
+                                    error: "Failed to create employee: " ++ error.description
+                                }
+                            ]]></ee:set-payload>
+                        </ee:message>
+                        <ee:variables>
+                            <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                        </ee:variables>
+                    </ee:transform>
+                </on-error-continue>
+            </error-handler>
+        </try>
+    </flow>
+
+    <flow name="get-employee">
+        <http:listener config-ref="http-config" path="/mcp/tools/get-employee" allowedMethods="GET"/>
+        <set-variable variableName="employeeId" value="#[attributes.queryParams.employeeId]"/>
+        <try>
+            <db:select config-ref="Database_Config">
+                <db:sql><![CDATA[
+                    SELECT * FROM employees WHERE id = :employeeId OR email = :employeeEmail
+                ]]></db:sql>
+                <db:input-parameters><![CDATA[
+                    {
+                        "employeeId": vars.employeeId,
+                        "employeeEmail": vars.employeeId
+                    }
+                ]]></db:input-parameters>
+            </db:select>
+            <choice>
+                <when expression="#[payload != []]">
+                    <ee:transform>
+                        <ee:message>
+                            <ee:set-payload><![CDATA[
+                                %dw 2.0
+                                output application/json
+                                ---
+                                {
+                                    success: true,
+                                    employee: payload[0]
+                                }
+                            ]]></ee:set-payload>
+                        </ee:message>
+                    </ee:transform>
+                </when>
+                <otherwise>
+                    <ee:transform>
+                        <ee:message>
+                            <ee:set-payload><![CDATA[
+                                %dw 2.0
+                                output application/json
+                                ---
+                                {
+                                    success: false,
+                                    error: "Employee not found"
+                                }
+                            ]]></ee:set-payload>
+                        </ee:message>
+                        <ee:variables>
+                            <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                        </ee:variables>
+                    </ee:transform>
+                </otherwise>
+            </choice>
+            <error-handler>
+                <on-error-continue>
+                    <ee:transform>
+                        <ee:message>
+                            <ee:set-payload><![CDATA[
+                                %dw 2.0
+                                output application/json
+                                ---
+                                {
+                                    success: false,
+                                    error: "Failed to retrieve employee: " ++ error.description
+                                }
+                            ]]></ee:set-payload>
+                        </ee:message>
+                        <ee:variables>
+                            <ee:set-variable variableName="httpStatus">500</ee:set-variable>
+                        </ee:variables>
+                    </ee:transform>
+                </on-error-continue>
+            </error-handler>
+        </try>
+    </flow>
+
+    <flow name="list-employees">
+        <http:listener config-ref="http-config" path="/mcp/tools/list-employees" allowedMethods="GET"/>
+        <try>
+            <db:select config-ref="Database_Config">
+                <db:sql><![CDATA[
+                    SELECT * FROM employees ORDER BY created_at DESC LIMIT 100
+                ]]></db:sql>
+            </db:select>
+            <ee:transform>
+                <ee:message>
+                    <ee:set-payload><![CDATA[
+                        %dw 2.0
+                        output application/json
+                        ---
+                        {
+                            success: true,
+                            employees: payload,
+                            count: sizeOf(payload)
+                        }
+                    ]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            <error-handler>
+                <on-error-continue>
+                    <ee:transform>
+                        <ee:message>
+                            <ee:set-payload><![CDATA[
+                                %dw 2.0
+                                output application/json
+                                ---
+                                {
+                                    success: false,
+                                    error: "Failed to retrieve employees: " ++ error.description
+                                }
+                            ]]></ee:set-payload>
+                        </ee:message>
+                        <ee:variables>
+                            <ee:set-variable variableName="httpStatus">500</ee:set-variable>
+                        </ee:variables>
+                    </ee:transform>
+                </on-error-continue>
+            </error-handler>
+        </try>
+    </flow>
+
+    <flow name="update-employee-status">
+        <http:listener config-ref="http-config" path="/mcp/tools/update-employee-status" allowedMethods="PUT"/>
+        <set-variable variableName="payload" value="#[payload]"/>
+        <try>
+            <db:update config-ref="Database_Config">
+                <db:sql><![CDATA[
+                    UPDATE employees 
+                    SET status = :status, updated_at = NOW() 
+                    WHERE id = :employeeId OR email = :employeeEmail
+                ]]></db:sql>
+                <db:input-parameters><![CDATA[
+                    {
+                        "employeeId": vars.payload.employeeId,
+                        "employeeEmail": vars.payload.employeeId,
+                        "status": vars.payload.status
+                    }
+                ]]></db:input-parameters>
+            </db:update>
+            <ee:transform>
+                <ee:message>
+                    <ee:set-payload><![CDATA[
+                        %dw 2.0
+                        output application/json
+                        ---
+                        {
+                            success: true,
+                            message: "Employee status updated successfully",
+                            employeeId: vars.payload.employeeId,
+                            newStatus: vars.payload.status
+                        }
+                    ]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            <error-handler>
+                <on-error-continue>
+                    <ee:transform>
+                        <ee:message>
+                            <ee:set-payload><![CDATA[
+                                %dw 2.0
+                                output application/json
+                                ---
+                                {
+                                    success: false,
+                                    error: "Failed to update employee status: " ++ error.description
+                                }
+                            ]]></ee:set-payload>
+                        </ee:message>
+                        <ee:variables>
+                            <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                        </ee:variables>
+                    </ee:transform>
+                </on-error-continue>
+            </error-handler>
+        </try>
+    </flow>
+
+    <flow name="mcp-health-check">
+        <http:listener config-ref="http-config" path="/mcp/health" allowedMethods="GET"/>
+        <try>
+            <db:select config-ref="Database_Config">
+                <db:sql><![CDATA[SELECT 1 as health_check]]></db:sql>
+            </db:select>
+            <ee:transform>
+                <ee:message>
+                    <ee:set-payload><![CDATA[
+                        %dw 2.0
+                        output application/json
+                        ---
+                        {
+                            status: "healthy",
+                            service: "PostgreSQL MCP Employee Service",
+                            timestamp: now() as String,
+                            database: "connected",
+                            version: "1.0.0"
+                        }
+                    ]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            <error-handler>
+                <on-error-continue>
+                    <ee:transform>
+                        <ee:message>
+                            <ee:set-payload><![CDATA[
+                                %dw 2.0
+                                output application/json
+                                ---
+                                {
+                                    status: "unhealthy",
+                                    service: "PostgreSQL MCP Employee Service",
+                                    timestamp: now() as String,
+                                    database: "disconnected",
+                                    error: error.description
+                                }
+                            ]]></ee:set-payload>
+                        </ee:message>
+                        <ee:variables>
+                            <ee:set-variable variableName="httpStatus">503</ee:set-variable>
+                        </ee:variables>
+                    </ee:transform>
+                </on-error-continue>
+            </error-handler>
+        </try>
+    </flow>
+</mule>
